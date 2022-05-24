@@ -11,6 +11,7 @@ This Hashi Vault plugin provides for token lifecycle management for DataStax Ast
     
 -   Use Hashi Vault to rotate tokens (future).
 
+For more, see the expanded [docs topic](docs/index.md).
 
 **Prerequisites**
 
@@ -60,4 +61,6 @@ Use Vault to create a new Astra token.
 
     vault write astra/org/token org_id=<YOUR ORG ID> role_name="<YOUR ROLE NAME>"
 
-   
+## Next steps
+
+For more, see the expanded [docs topic](docs/index.md).
