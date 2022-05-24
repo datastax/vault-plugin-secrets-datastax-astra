@@ -18,7 +18,7 @@ This Hashi Vault plugin provides for token lifecycle management for DataStax Ast
  
  - [Golang](https://go.dev/doc/install) must be installed.
  
- - You must have an Astra Account 
+ - You must have an Astra Account.
  
  - You must have admin access to an Astra organization .
    
