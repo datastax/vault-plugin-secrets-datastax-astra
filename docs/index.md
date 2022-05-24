@@ -1,10 +1,10 @@
-# DataStax Astra DB Plugin for Hashi Vault
+# DataStax Astra DB Plugin for HashiCorp Vault
 
 Welcome developers, security and database administrators, site reliability engineers, and operators. 
 
-This open-source project, DataStax Astra DB Plugin for Hashi Vault, adds robust **token lifecycle management** features for Astra DB. Due to the nature of the Astra DB object hierarchy, by default, API tokens are not associated with specific users and currently the tokens do not have metadata descriptions. 
+This open-source project, DataStax Astra DB Plugin for HashiCorp Vault, adds robust **token lifecycle management** features for Astra DB. Due to the nature of the Astra DB object hierarchy, by default, API tokens are not associated with specific users and currently the tokens do not have metadata descriptions. 
 
-As a result, without the plugin, it's easy to lose track of:
+Without the plugin, it's easy to lose track of:
 
 * Who created tokens
 * The purpose of each token
@@ -12,15 +12,17 @@ As a result, without the plugin, it's easy to lose track of:
 
 Consequently, there's no audit trail of who has downloaded and used tokens, and there's no tracking regarding who may have manually shared tokens with others. 
 
-Astra DB Plugin for Hashi Vault solves these security management issues. To ensure that your token ownership and usage are well understood, the plugin gives you the ability to associate metadata with tokens -- such as the user who created each token, and what it is being used for -- and logs who has accessed the tokens. 
+Astra DB Plugin for HashiCorp Vault solves these security management issues. To ensure that your token ownership and usage are well understood, the plugin gives you the ability to associate metadata with tokens -- such as the user who created each token, and what it is being used for -- and logs who has accessed the tokens. 
 
-Hashi Vault is a widely-used solution across the tech industry. It's an identity-based secrets and encryption management system. Hashi Vault provides key-value encryption services that are gated by authentication and authorization methods. Access to tokens, secrets, and other sensitive data are securely stored, managed, and tightly controlled. Audit trails are provided. Hashi Vault is also extensible via a variety of interfaces, allowing plugins (including Astra DB Plugin for Hashi Vault) to contribute to this ecosystem.
+## What is HashiCorp Vault?
 
-Astra DB Plugin for Hashi Vault is offered as a Public Beta under the [Apache 2.0](../LICENSE.txt) license.
+HashiCorp Vault is a widely-used solution across the tech industry. It's an identity-based secrets and encryption management system. HashiCorp Vault provides key-value encryption services that are gated by authentication and authorization methods. Access to tokens, secrets, and other sensitive data are securely stored, managed, and tightly controlled. Audit trails are provided. HashiCorp Vault is also extensible via a variety of interfaces, allowing plugins (including Astra DB Plugin for HashiCorp Vault) to contribute to this ecosystem.
+
+Astra DB Plugin for HashiCorp Vault is offered as a Public Beta under the [Apache 2.0](../LICENSE.txt) license.
 
 ## Benefits
 
-You can use Astra DB Plugin for Hashi Vault to: 	
+You can use Astra DB Plugin for HashiCorp Vault to: 	
 
 * Log access to Astra DB tokens
 * Create and revoke Astra DB tokens
@@ -28,7 +30,7 @@ You can use Astra DB Plugin for Hashi Vault to:
 
 The plugin's roadmap includes dynamic tokens; that is, the additional ability to rotate tokens based on a token's lifetime lease.
 
-For related details, see the [Hashi Vault](https://www.hashicorp.com/products/vault) documentation.
+For related details, see the [HashiCorp Vault](https://www.hashicorp.com/products/vault) documentation.
 
 ## Prerequisites
 
@@ -39,20 +41,20 @@ If you haven't already, clone this [GitHub repo](https://github.com/datastax/vau
 You will need:
 
 * [Golang](https://go.dev/doc/install) v1.17.9+ installed.
-* A fully functional configured Hashi Vault instance, including the ability to run the `vault` command.
+* A fully functional configured HashiCorp Vault instance, including the ability to run the `vault` command.
 * An Astra DB account with an administrator's role - see [Roles and Permissions](#roles-and-permissions).
-* A *root token* for each Astra DB organization that Hashi Vault will manage; the steps are covered in this topic. 
+* A *root token* for each Astra DB organization that HashiCorp Vault will manage; the steps are covered in this topic. 
 
 ### If you'll install and use the plugin binary
 
 You will need:
 
 * An Astra DB account with an admin role - see [Roles and Permissions](#roles-and-permissions).
-* A *root token* for each Astra DB organization that Hashi Vault will manage; the steps are covered in this topic. 
+* A *root token* for each Astra DB organization that HashiCorp Vault will manage; the steps are covered in this topic. 
 
 ## About root tokens
 
-Astra DB Plugin for Hashi Vault will use the root token (per organization) to subsequently generate additional tokens. Sample `vault` commands are presented in this topic. 
+Astra DB Plugin for HashiCorp Vault will use the root token (per organization) to subsequently generate additional tokens. Sample `vault` commands are presented in this topic. 
 
 For information first on how to generate tokens with Astra DB, see:
 
@@ -74,7 +76,7 @@ For more, see [user roles and permissions](https://docs.datastax.com/en/astra/do
 
 ## Pricing
 
-Astra DB Plugin for Hashi Vault is free. See the HashiCorp Platform (HCP) Vault site for its [enterprise pricing](https://cloud.hashicorp.com/products/vault/pricing) details. 
+Astra DB Plugin for HashiCorp Vault is free. See the HashiCorp Platform Vault site for its [enterprise pricing](https://cloud.hashicorp.com/products/vault/pricing) details. 
 
 ## Build steps - optional
 
@@ -94,9 +96,9 @@ If you elect to build the plugin from Go modules in our GitHub repo, follow thes
 
 ## Setup plugin from binary distribution
 
-1. Create a plugins directory where Hashi Vault will find the plugin. Example: `./vault/plugins`.  **IMPORTANT:** do not specify a symlinked directory.
+1. Create a plugins directory where HashiCorp Vault will find the plugin. Example: `./vault/plugins`.  **IMPORTANT:** do not specify a symlinked directory.
 
-2. Download the latest release Astra DB Plugin for Hashi Vault package for your operating system. In GitHub, navigate to the following directory, and click the relevant tarball to download it: https://github.com/datastax/vault-plugin-secrets-datastax-astra/releases/tag/v0.1.0. 
+2. Download the latest release Astra DB Plugin for HashiCorp Vault package for your operating system. In GitHub, navigate to the following directory, and click the relevant tarball to download it: https://github.com/datastax/vault-plugin-secrets-datastax-astra/releases/tag/v0.1.0. 
 
 3. Unpack the binary and move its files to your plugin directory. 
 
@@ -106,7 +108,7 @@ If you elect to build the plugin from Go modules in our GitHub repo, follow thes
 	vault server -dev -dev-root-token-id=root -dev-plugin-dir=./vault/plugins -log-level=debug
 	```
 
-	**NOTE:** This example is for development environments. Do not start the Hashi Vault server in `-dev` mode in production.
+	**NOTE:** This example is for development environments. Do not start the HashiCorp Vault server in `-dev` mode in production.
 
 	You may need to also set up the following environment variable:
 
@@ -142,15 +144,15 @@ If you elect to build the plugin from Go modules in our GitHub repo, follow thes
 	Success! Enabled the vault-plugin-secrets-datastax-astra secrets engine at: astra/
 	```
 
-At this point, Hashi Vault and Astra DB Plugin for Hashi Vault are set up. They're ready to use.
+At this point, HashiCorp Vault and Astra DB Plugin for HashiCorp Vault are set up. They're ready to use.
 
-## Using Astra DB tokens with Hashi Vault
+## Using Astra DB tokens with HashiCorp Vault
 
-There are several tasks you can submit with Hashi Vault commands:
+There are several tasks you can submit with HashiCorp Vault commands:
 
 * Add a root token for each Astra DB organization
 * Read and list configurations
-* Generate Hashi Vault roles from Astra DB roles
+* Generate HashiCorp Vault roles from Astra DB roles
 * Generate new tokens and attach meaningful, custom metadata for your company's tracking and auditing purposes
 
 In this example, assume a company has three Astra DB organizations:
@@ -183,7 +185,7 @@ Follow these steps:
 	Success! Data written to astra/configs
 	```
 
-	The created root token will be used by Hashi Vault for further token operations within this organization. 
+	The created root token will be used by HashiCorp Vault for further token operations within this organization. 
 
 	Submit a `vault write astra/config ...` command for each organization by providing its unique identifiers. Remember to also specify a unique `logical_name` value, such as `logical_name="wholesaleOrg"`.  Examples:
 
@@ -231,7 +233,7 @@ Follow these steps:
 
 	You can also use the `vault read astra/config...` command to search by `logical_name`.
 
-3. Use the installed token to automatically generate Hashi Vault roles from Astra DB roles:
+3. Use the installed token to automatically generate HashiCorp Vault roles from Astra DB roles:
 
 	You can get a list of `role_id` values for an Astra DB organization by using the DataStax DevOps API. Example:
 
@@ -242,7 +244,7 @@ Follow these steps:
 	 --header 'Authorization: Bearer <application_token>'
 	```
 
-	Or you can run the [update_roles.sh](https://github.com/datastax/vault-plugin-secrets-datastax-astra/blob/main/update_roles.sh) script. It's provided in our GitHub repo. The script adds all the Astra DB roles (default and custom) and their IDs to Hashi Vault. Example:
+	Or you can run the [update_roles.sh](https://github.com/datastax/vault-plugin-secrets-datastax-astra/blob/main/update_roles.sh) script. It's provided in our GitHub repo. The script adds all the Astra DB roles (default and custom) and their IDs to HashiCorp Vault. Example:
 
 	```bash
 	sh vault/plugins/vault-plugin-secrets-datastax-astra/update_roles.sh
@@ -262,7 +264,7 @@ Follow these steps:
 
 	Also available is the `vault delete astra/role org_id="<ORG ID>" role="<ROLE NAME>"` command.
 
-5. For any of the roles, you can use Hashi Vault to generate a new Astra DB token. Example:
+5. For any of the roles, you can use HashiCorp Vault to generate a new Astra DB token. Example:
 
 	```bash
 	vault write astra/org/token org_id="<ORG ID>" role_name="<ROLE NAME>"
@@ -298,17 +300,17 @@ Follow these steps:
 
 ## Summary
 
-Hashi Vault has a full understanding of the historical token specifics, for control and auditing purposes, including when the tokens were used and by whom, along with a free-form role name and any custom metadata you may have associated with the tokens. For example, in the example above, Hashi Vault's data knows the details of the token delete operation via its identity management and access control data; whereas Astra DB (in this example) is only aware that a token of a particular clientId was generated on a date, and has since been deleted.
+HashiCorp Vault has a full understanding of the historical token specifics, for control and auditing purposes, including when the tokens were used and by whom, along with a free-form role name and any custom metadata you may have associated with the tokens. For example, in the example above, HashiCorp Vault's data knows the details of the token delete operation via its identity management and access control data; whereas Astra DB (in this example) is only aware that a token of a particular clientId was generated on a date, and has since been deleted.
 
 ## Community contributions
 
-Astra DB Plugin for Hashi Vault is an open source project. In this GitHub repo, use [Issues](https://github.com/datastax/vault-plugin-secrets-datastax-astra/issues) to report a problem or share an idea. You may suggest ideas for improvement or bug fixes. [Clone the repo](https://github.com/datastax/vault-plugin-secrets-datastax-astra) and submit a Pull Request (PR) on a separate fork and working branch. This OSS project is a community effort - we encourage and appreciate contributions!
+Astra DB Plugin for HashiCorp Vault is an open source project. In this GitHub repo, use [Issues](https://github.com/datastax/vault-plugin-secrets-datastax-astra/issues) to report a problem or share an idea. You may suggest ideas for improvement or bug fixes. [Clone the repo](https://github.com/datastax/vault-plugin-secrets-datastax-astra) and submit a Pull Request (PR) on a separate fork and working branch. This OSS project is a community effort - we encourage and appreciate contributions!
 
 ## What's next
 
 See the following resources:
 
 * TODO: Add link to demo video.
-* [Hashi Vault](https://www.hashicorp.com/products/vault) documentation
+* [HashiCorp Vault](https://www.hashicorp.com/products/vault) documentation
 * [How to generate tokens in Astra DB](https://docs.datastax.com/en/astra/docs/manage/org/managing-org.html#_manage_application_tokens) 
 * [Astra DB user permissions](https://docs.datastax.com/en/astra/docs/manage/org/user-permissions.html)
