@@ -52,6 +52,14 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 				Required:     false,
 				DisplayAttrs: &framework.DisplayAttributes{Sensitive: false},
 			},
+			"client_id": {
+				Type:        framework.TypeString,
+				Description: "ClientId for the token",
+				Required:    false,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Sensitive: false,
+				},
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -68,17 +76,37 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 
 // pathCredentialsRead reads a token from vault.
 func (b *datastaxAstraBackend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleName, ok := d.GetOk("role_name")
+	clientId, ok := d.GetOk("client_id")
 	if !ok {
-		return nil, errors.New("role_name not provided")
-	}
-	orgId, ok := d.GetOk("org_id")
-	if !ok {
-		return nil, errors.New("org_id not provided")
-	}
-	logicalName, ok := d.GetOk("logical_name")
-	if !ok {
-		return nil, errors.New("logical_name not provided")
+		roleName, ok := d.GetOk("role_name")
+		if !ok {
+			return nil, errors.New("role_name not provided")
+		}
+		orgId, ok := d.GetOk("org_id")
+		if !ok {
+			return nil, errors.New("org_id not provided")
+		}
+		logicalName, ok := d.GetOk("logical_name")
+		if !ok {
+			return nil, errors.New("logical_name not provided")
+		}
+		tokens, err := listCreds(ctx, req.Storage)
+		if err != nil {
+			return nil, errors.New("no tokens found")
+		}
+		if len(tokens) == 0 {
+			return nil, errors.New("no token found in vault")
+		}
+		for i := 0; i < len(tokens); i++ {
+			token, err := readToken(ctx, req.Storage, tokens[i])
+			if err != nil {
+				return nil, errors.New("no tokens found")
+			}
+			if doesTokenMatch(token, orgId.(string), roleName.(string), logicalName.(string)) {
+				return &logical.Response{Data: token.toResponseData()}, nil
+			}
+		}
+		return nil, errors.New("no token found that matches criteria")
 	}
 	tokens, err := listCreds(ctx, req.Storage)
 	if err != nil {
@@ -92,16 +120,21 @@ func (b *datastaxAstraBackend) pathCredentialsRead(ctx context.Context, req *log
 		if err != nil {
 			return nil, errors.New("no tokens found")
 		}
-		if doesTokenMatch(token, orgId.(string), roleName.(string), logicalName.(string)) {
+		if doesTokenMatchClientId(token, clientId.(string)) {
 			return &logical.Response{Data: token.toResponseData()}, nil
 		}
 	}
-	return nil, errors.New("no token found that matches criteria")
+	return nil, errors.New("no token found that matches criteria client")
 }
 
+func doesTokenMatchClientId(token *astraToken, clientId string) bool {
+	return token.ClientID == clientId
+}
+	
 func doesTokenMatch(token *astraToken, orgId, role, logicalName string) bool {
 	return token.LogicalName == logicalName && token.OrgID == orgId && token.RoleNickname == role
 }
+
 func readToken(ctx context.Context, s logical.Storage, uuid string) (*astraToken, error) {
 	token, err := s.Get(ctx, "token/"+uuid)
 	if err != nil {
