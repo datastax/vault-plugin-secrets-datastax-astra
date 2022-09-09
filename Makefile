@@ -43,10 +43,7 @@ vault_server:
 
 vault_plugin:
 	vault secrets enable -path=astra vault-plugin-secrets-datastax-astra
-	# vault write astra/config org_id="$ORG_UUID" astra_token="$TOKEN" url="https://api.astra.datastax.com" logical_name="org_logical_name"
-	vault write astra/config org_id="03acd0a6-1451-4827-b206-81ad1099f1a1" astra_token="AstraCS:oWGwZjPlKzmYNTSjZXrTLmLp:3991c593265d8a7437571172a3dae19451256acd8d682c6616f545c2b67c1f5a" url="https://api.astra.datastax.com" logical_name="org1"
-	sh update_roles.sh
-	vault write astra/org/token org_id="03acd0a6-1451-4827-b206-81ad1099f1a1" role_name="api_r_w_user" logical_name="org1"
+	vault write astra/config org_id="$ORG_UUID" astra_token="$TOKEN" url="https://api.astra.datastax.com" logical_name="org_logical_name"
 
 vault_server_screen:
 	screen -d -m vault server -dev -dev-root-token-id=root -dev-plugin-dir=./vault/plugins -log-level=debug ; sleep 5
