@@ -1,6 +1,8 @@
 package datastax_astra
 
 import (
+	// "time"
+
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
@@ -32,6 +34,8 @@ func (b *datastaxAstraBackend) astraToken() *framework.Secret {
 				Description: "Astra Token",
 			},
 		},
+		Renew: b.tokenRenew,
+		Revoke: b.tokenRevoke,
 	}
 }
 
