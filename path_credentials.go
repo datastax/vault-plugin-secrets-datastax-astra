@@ -379,9 +379,7 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 
 func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{Secret: req.Secret}
-
 	// resp.Secret.TTL = 30 * time.Second
-
 	return resp, nil
 }
 
