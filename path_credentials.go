@@ -238,11 +238,10 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 
 	leaseTime, ok := d.GetOk("lease_time")
 	if !ok {
-		return nil, errors.New("role_name not provided")
+		return nil, errors.New("lease_time not provided")
 	}
 	parseLeaseTime, _ := time.ParseDuration(leaseTime.(string))
 	resp.Secret.TTL = parseLeaseTime
-	// resp.Secret.MaxTTL = 60 * time.Second
 	resp.Secret.Renewable = true
 	return resp, nil
 }
@@ -381,7 +380,7 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{Secret: req.Secret}
 
-	resp.Secret.TTL = 30 * time.Second
+	// resp.Secret.TTL = 30 * time.Second
 
 	return resp, nil
 }
