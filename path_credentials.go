@@ -65,7 +65,7 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 			},
 			"lease_time": {
 				Type:        framework.TypeString,
-				Description: "leaseTime for the token",
+				Description: "leaseTime in seconds for the token",
 				Required:    false,
 			},
 		},
@@ -216,7 +216,6 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 		return nil, errors.New(msg)
 	}
 	metadata, ok, err := d.GetOkErr("metadata")
-	
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
 	}
@@ -235,10 +234,9 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 		return nil, err
 	}
 	resp := b.Secret(astraTokenType).Response(token.toResponseData(), internalData)
-
 	leaseTime, ok := d.GetOk("lease_time")
 	if !ok {
-		return nil, errors.New("lease_time not provided")
+		return resp, nil
 	}
 	parseLeaseTime, _ := time.ParseDuration(leaseTime.(string))
 	resp.Secret.TTL = parseLeaseTime
@@ -319,7 +317,7 @@ func saveToken(ctx context.Context, token *astraToken, s logical.Storage) error 
 	return nil
 }
 
-func doesTokensMatch(token *astraToken, tokentoRevoke string ) bool {
+func doesTokensMatch(token *astraToken, tokentoRevoke string) bool {
 	return token.Token == tokentoRevoke
 }
 
@@ -329,7 +327,7 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 	if !ok {
 		return nil, errors.New("token not retrived")
 	}
-	
+
 	tokens, err := listCreds(ctx, req.Storage)
 	if err != nil {
 		return nil, errors.New("no tokens found")
@@ -379,7 +377,7 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 
 func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{Secret: req.Secret}
-	// resp.Secret.TTL = 30 * time.Second
+	resp.Secret.TTL = 900 * time.Second
 	return resp, nil
 }
 

@@ -1,8 +1,6 @@
 package datastax_astra
 
 import (
-	// "time"
-
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
