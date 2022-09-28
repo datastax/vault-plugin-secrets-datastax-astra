@@ -65,7 +65,7 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 			},
 			"lease_time": {
 				Type:        framework.TypeString,
-				Description: "leaseTime in seconds for the token",
+				Description: "leaseTime in seconds, minutes or hours for the token. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
 				Required:    false,
 			},
 		},
@@ -377,7 +377,23 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 
 func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{Secret: req.Secret}
-	resp.Secret.TTL = 900 * time.Second
+	uuid:= req.Data["orgId"]
+	configData, err:= getConfig(ctx, req.Storage, uuid.(string))
+	if err != nil{
+		resp.Secret.TTL = 24 * time.Hour
+		return resp, errors.New("error getting config data. lease time set to 24h")
+	}
+	renewal_time := configData.DefaultLeaseRenewTime
+	if renewal_time == "" {
+		resp.Secret.TTL = 24 * time.Hour
+		return resp, nil
+	}
+	parsedRenewalTime, err := time.ParseDuration(renewal_time) 
+	if err != nil {
+		resp.Secret.TTL = 24 * time.Hour
+		return resp, errors.New("error parsing default lease time. lease time set to 24h")
+	}
+	resp.Secret.TTL = parsedRenewalTime
 	return resp, nil
 }
 
