@@ -17,10 +17,10 @@ const (
 // astraConfig includes the minimum configuration
 // required to instantiate a new astra client.
 type astraConfig struct {
-	AstraToken  string `json:"astra_token"`
-	URL         string `json:"url"`
-	OrgId       string `json:"org_id"`
-	LogicalName string `json:"logical_name"`
+	AstraToken            string `json:"astra_token"`
+	URL                   string `json:"url"`
+	OrgId                 string `json:"org_id"`
+	LogicalName           string `json:"logical_name"`
 	DefaultLeaseRenewTime string `json:"renewal_time"`
 }
 
@@ -157,7 +157,7 @@ func (b *datastaxAstraBackend) pathConfigRead(ctx context.Context, req *logical.
 				}, nil
 			}
 		}
-		return nil, errors.New("no config found for logical_name = " +logicalName)
+		return nil, errors.New("no config found for logical_name = " + logicalName)
 	}
 	if orgId != "" {
 		config, err := getConfig(ctx, req.Storage, orgId)
@@ -207,10 +207,10 @@ func (b *datastaxAstraBackend) pathConfigWrite(ctx context.Context, req *logical
 	}
 	renewalTime := data.Get("renewal_time")
 	config := astraConfig{
-		AstraToken:  token.(string),
-		URL:         url.(string),
-		OrgId:       orgId.(string),
-		LogicalName: logicalName.(string),
+		AstraToken:            token.(string),
+		URL:                   url.(string),
+		OrgId:                 orgId.(string),
+		LogicalName:           logicalName.(string),
 		DefaultLeaseRenewTime: renewalTime.(string),
 	}
 	err = saveConfig(ctx, &config, req.Storage)

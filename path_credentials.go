@@ -317,7 +317,7 @@ func saveToken(ctx context.Context, token *astraToken, s logical.Storage) error 
 	return nil
 }
 
-func doesTokensMatch(token *astraToken, tokentoRevoke string) bool {
+func doTokensMatch(token *astraToken, tokentoRevoke string) bool {
 	return token.Token == tokentoRevoke
 }
 
@@ -338,7 +338,7 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 		if err != nil {
 			return nil, errors.New("no tokens found")
 		}
-		if doesTokensMatch(token, tokenRaw.(string)) {
+		if doTokensMatch(token, tokenRaw.(string)) {
 			err = req.Storage.Delete(ctx, "token/"+tokens[i])
 			if err != nil {
 				return nil, err
