@@ -42,7 +42,7 @@ vault_server:
 	vault server -dev -dev-root-token-id=root -dev-plugin-dir=./vault/plugins -log-level=debug
 
 vault_plugin:
-	vault secrets enable -path=astra vault-plugin-secrets-datastax-astra 
+	vault secrets enable -path=astra vault-plugin-secrets-datastax-astra
 	vault write astra/config org_id="$ORG_UUID" astra_token="$TOKEN" url="https://api.astra.datastax.com" logical_name="org_logical_name"
 
 vault_server_screen:
