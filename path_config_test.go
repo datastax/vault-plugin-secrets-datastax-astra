@@ -2,8 +2,6 @@ package datastax_astra
 
 import (
 	"context"
-
-	// "fmt"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -20,7 +18,7 @@ const (
 
 
 // TestConfig mocks the creation, read, update, and delete
-// of the backend configuration for HashiCups.
+// of the backend configuration for astra.
 func TestConfig(t *testing.T) {
 	b, reqStorage := getTestBackend(t)
 
@@ -41,16 +39,6 @@ func TestConfig(t *testing.T) {
 		})
 
 		assert.NoError(t, err)
-
-		// err = testConfigUpdate(t, b, reqStorage, map[string]interface{}{
-		// 	"astra_token": astra_token,
-		// 	"url": url,
-		// 	"org_id":  org_id,
-		// 	"logical_name": logical_name,
-		// 	"renewal_time": renewal_time,
-		// })
-
-		// assert.NoError(t, err)
 
 		err = testConfigRead(t, b, reqStorage, map[string]interface{}{
 			"org_id":       org_id,
@@ -103,24 +91,6 @@ func testConfigCreate(t *testing.T, b logical.Backend, s logical.Storage, d map[
 	return nil
 }
 
-func testConfigUpdate(t *testing.T, b logical.Backend, s logical.Storage, d map[string]interface{}) error {
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config",
-		Data:      d,
-		Storage:   s,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	if resp != nil && resp.IsError() {
-		return resp.Error()
-	}
-	return nil
-}
-
 func testConfigRead(t *testing.T, b logical.Backend, s logical.Storage, d map[string]interface{}) error {
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -133,27 +103,9 @@ func testConfigRead(t *testing.T, b logical.Backend, s logical.Storage, d map[st
 		return err
 	}
 
-	// if resp == nil && expected == nil {
-	// 	return nil
-	// }
-
 	if resp != nil && resp.IsError() {
 		return resp.Error()
 	}
-
-	// if len(expected) != len(resp.Data) {
-	// 	return fmt.Errorf("read data mismatch (expected %d values, got %d)", len(expected), len(resp.Data))
-	// }
-
-	// for k, expectedV := range expected {
-	// 	actualV, ok := resp.Data[k]
-
-	// 	if !ok {
-	// 		return fmt.Errorf(`expected data["%s"] = %v but was not included in read output"`, k, expectedV)
-	// 	} else if expectedV != actualV {
-	// 		return fmt.Errorf(`expected data["%s"] = %v, instead got %v"`, k, expectedV, actualV)
-	// 	}
-	// }
 
 	return nil
 }
