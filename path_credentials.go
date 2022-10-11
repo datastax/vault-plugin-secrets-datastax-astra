@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/logical"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"time"
+
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -59,6 +62,11 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 				DisplayAttrs: &framework.DisplayAttributes{
 					Sensitive: false,
 				},
+			},
+			"lease_time": {
+				Type:        framework.TypeString,
+				Description: "leaseTime in seconds, minutes or hours for the token. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
+				Required:    false,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -130,7 +138,7 @@ func (b *datastaxAstraBackend) pathCredentialsRead(ctx context.Context, req *log
 func doesTokenMatchClientId(token *astraToken, clientId string) bool {
 	return token.ClientID == clientId
 }
-	
+
 func doesTokenMatch(token *astraToken, orgId, role, logicalName string) bool {
 	return token.LogicalName == logicalName && token.OrgID == orgId && token.RoleNickname == role
 }
@@ -220,11 +228,19 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 		"token":    token.Token,
 		"metadata": token.Metadata,
 	}
+
 	err = saveToken(ctx, token, req.Storage)
 	if err != nil {
 		return nil, err
 	}
 	resp := b.Secret(astraTokenType).Response(token.toResponseData(), internalData)
+	leaseTime, ok := d.GetOk("lease_time")
+	if !ok {
+		return resp, nil
+	}
+	parseLeaseTime, _ := time.ParseDuration(leaseTime.(string))
+	resp.Secret.TTL = parseLeaseTime
+	resp.Secret.Renewable = true
 	return resp, nil
 }
 
@@ -299,6 +315,86 @@ func saveToken(ctx context.Context, token *astraToken, s logical.Storage) error 
 		return err
 	}
 	return nil
+}
+
+func doTokensMatch(token *astraToken, tokentoRevoke string) bool {
+	return token.Token == tokentoRevoke
+}
+
+func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	tokenRaw, ok := req.Secret.InternalData["token"]
+	if !ok {
+		return nil, errors.New("token not retrived")
+	}
+
+	tokens, err := listCreds(ctx, req.Storage)
+	if err != nil {
+		return nil, errors.New("no tokens found")
+	}
+
+	for i := 0; i < len(tokens); i++ {
+		token, err := readToken(ctx, req.Storage, tokens[i])
+		if err != nil {
+			return nil, errors.New("no tokens found")
+		}
+		if doTokensMatch(token, tokenRaw.(string)) {
+			err = req.Storage.Delete(ctx, "token/"+tokens[i])
+			if err != nil {
+				return nil, err
+			}
+			conf, err := getConfig(ctx, req.Storage, token.OrgID)
+			if err != nil {
+				return nil, err
+			}
+			if conf.URL != "" {
+				client := &http.Client{}
+				url := conf.URL + "/v2/clientIdSecrets/" + token.ClientID
+				httpReq, err := http.NewRequest(http.MethodDelete, url, nil)
+				if err != nil {
+					msg := "error creating httpReq " + err.Error()
+					return nil, errors.New(msg)
+				}
+				httpReq.Header.Add("Content-Type", "application/json")
+				httpReq.Header.Add("Authorization", "Bearer "+conf.AstraToken)
+				res, err := client.Do(httpReq)
+				if err != nil {
+					msg := "error sending request " + err.Error()
+					return nil, errors.New(msg)
+				}
+				defer res.Body.Close()
+				if res.StatusCode != http.StatusNoContent {
+					return nil, errors.New("could not delete token in astra")
+				}
+			} else {
+				return nil, errors.New("config not found")
+			}
+		}
+	}
+	b.reset()
+	return nil, nil
+}
+
+func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{Secret: req.Secret}
+	uuid:= req.Data["orgId"]
+	configData, err:= getConfig(ctx, req.Storage, uuid.(string))
+	if err != nil{
+		resp.Secret.TTL = 24 * time.Hour
+		return resp, errors.New("error getting config data. lease time set to 24h")
+	}
+	renewal_time := configData.DefaultLeaseRenewTime
+	if renewal_time == "" {
+		resp.Secret.TTL = 24 * time.Hour
+		return resp, nil
+	}
+	parsedRenewalTime, err := time.ParseDuration(renewal_time) 
+	if err != nil {
+		resp.Secret.TTL = 24 * time.Hour
+		return resp, errors.New("error parsing default lease time. lease time set to 24h")
+	}
+	resp.Secret.TTL = parsedRenewalTime
+	return resp, nil
 }
 
 const pathCredentialsHelpSyn = `

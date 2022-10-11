@@ -32,6 +32,8 @@ func (b *datastaxAstraBackend) astraToken() *framework.Secret {
 				Description: "Astra Token",
 			},
 		},
+		Renew: b.tokenRenew,
+		Revoke: b.tokenRevoke,
 	}
 }
 

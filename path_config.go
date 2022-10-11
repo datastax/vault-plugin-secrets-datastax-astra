@@ -17,10 +17,11 @@ const (
 // astraConfig includes the minimum configuration
 // required to instantiate a new astra client.
 type astraConfig struct {
-	AstraToken  string `json:"astra_token"`
-	URL         string `json:"url"`
-	OrgId       string `json:"org_id"`
-	LogicalName string `json:"logical_name"`
+	AstraToken            string `json:"astra_token"`
+	URL                   string `json:"url"`
+	OrgId                 string `json:"org_id"`
+	LogicalName           string `json:"logical_name"`
+	DefaultLeaseRenewTime string `json:"renewal_time"`
 }
 
 func pathConfig(b *datastaxAstraBackend) *framework.Path {
@@ -60,6 +61,15 @@ func pathConfig(b *datastaxAstraBackend) *framework.Path {
 				Required:    false,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:      "logical_name",
+					Sensitive: false,
+				},
+			},
+			"renewal_time": {
+				Type:        framework.TypeString,
+				Description: "Default lease time in seconds, minutes or hours for renew operation. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
+				Required:    false,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:      "renewal_time",
 					Sensitive: false,
 				},
 			},
@@ -142,11 +152,12 @@ func (b *datastaxAstraBackend) pathConfigRead(ctx context.Context, req *logical.
 						"url":          m.URL,
 						"org_id":       m.OrgId,
 						"logical_name": m.LogicalName,
+						"renewal_time": m.DefaultLeaseRenewTime,
 					},
 				}, nil
 			}
 		}
-		return nil, errors.New("no config found for logical_name = " +logicalName)
+		return nil, errors.New("no config found for logical_name = " + logicalName)
 	}
 	if orgId != "" {
 		config, err := getConfig(ctx, req.Storage, orgId)
@@ -162,6 +173,7 @@ func (b *datastaxAstraBackend) pathConfigRead(ctx context.Context, req *logical.
 				"url":          config.URL,
 				"org_id":       config.OrgId,
 				"logical_name": config.LogicalName,
+				"renewal_time": config.DefaultLeaseRenewTime,
 			},
 		}, nil
 	}
@@ -193,11 +205,13 @@ func (b *datastaxAstraBackend) pathConfigWrite(ctx context.Context, req *logical
 	if c != nil {
 		return nil, errors.New("config already exists")
 	}
+	renewalTime := data.Get("renewal_time")
 	config := astraConfig{
-		AstraToken:  token.(string),
-		URL:         url.(string),
-		OrgId:       orgId.(string),
-		LogicalName: logicalName.(string),
+		AstraToken:            token.(string),
+		URL:                   url.(string),
+		OrgId:                 orgId.(string),
+		LogicalName:           logicalName.(string),
+		DefaultLeaseRenewTime: renewalTime.(string),
 	}
 	err = saveConfig(ctx, &config, req.Storage)
 	if err != nil {
