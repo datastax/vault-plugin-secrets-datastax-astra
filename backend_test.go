@@ -10,15 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Fill in the config details to test. 
+// Fill in the config details to test.
 const (
 	envVarAstraToken       = ""
 	envVarAstraOrgId       = ""
 	envVarAstraLogicalName = ""
 	envVarAstraURL         = ""
-	envVarRoleName		   = ""
-	envVarLeaseTime		   = ""
-	envVarRenewalTime	   = ""
+	envVarRoleName         = ""
+	envVarLeaseTime        = ""
+	envVarRenewalTime      = ""
 )
 
 // getTestBackend will help you construct a test backend object.
@@ -45,11 +45,10 @@ type testEnv struct {
 	URL         string
 	OrgId       string
 	LogicalName string
-	RoleName	string
-	LeaseTime	string
-	RenewalTime string 
+	RoleName    string
+	LeaseTime   string
+	RenewalTime string
 	response    *logical.Response
-
 
 	Backend logical.Backend
 	Context context.Context
@@ -86,7 +85,7 @@ func (e *testEnv) AddUserTokenRole(t *testing.T) {
 		Path:      "role",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-			"role": e.RoleName,
+			"role":   e.RoleName,
 			"org_id": e.OrgId,
 		},
 	}
@@ -103,8 +102,8 @@ func (e *testEnv) WriteUserToken(t *testing.T) {
 		Data: map[string]interface{}{
 			"org_id":       e.OrgId,
 			"logical_name": e.LogicalName,
-			"role_name": 	e.RoleName,
-			"lease_time": e.LeaseTime,
+			"role_name":    e.RoleName,
+			"lease_time":   e.LeaseTime,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
@@ -132,7 +131,7 @@ func (e *testEnv) ReadUserToken(t *testing.T) {
 		Data: map[string]interface{}{
 			"org_id":       e.OrgId,
 			"logical_name": e.LogicalName,
-			"role_name": 	e.RoleName,
+			"role_name":    e.RoleName,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
@@ -140,7 +139,7 @@ func (e *testEnv) ReadUserToken(t *testing.T) {
 	require.NotNil(t, resp.Data["token"])
 	require.NotNil(t, resp.Data["orgId"])
 	require.NotNil(t, resp.Data["logicalName"])
-	expectedResp:= map[string]interface{}{"clientId": e.response.Data["clientId"], "generatedOn":e.response.Data["generatedOn"], "logicalName": "org1", "metadata": map[string]string(nil), "orgId": "03acd0a6-1451-4827-b206-81ad1099f1a1", "roleName": "r_w_user", "token": e.response.Data["token"]}
+	expectedResp := map[string]interface{}{"clientId": e.response.Data["clientId"], "generatedOn": e.response.Data["generatedOn"], "logicalName": "org1", "metadata": map[string]string(nil), "orgId": "03acd0a6-1451-4827-b206-81ad1099f1a1", "roleName": "r_w_user", "token": e.response.Data["token"]}
 	require.NotNil(t, resp)
 	require.Equal(t, expectedResp, resp.Data)
 	require.Nil(t, err)
@@ -160,7 +159,7 @@ func (e *testEnv) ReadUserTokenUsingClientId(t *testing.T) {
 	require.NotNil(t, resp.Data["token"])
 	require.NotNil(t, resp.Data["orgId"])
 	require.NotNil(t, resp.Data["logicalName"])
-	expectedResp:= map[string]interface{}{"clientId": e.response.Data["clientId"], "generatedOn":e.response.Data["generatedOn"], "logicalName": "org1", "metadata": map[string]string(nil), "orgId": "03acd0a6-1451-4827-b206-81ad1099f1a1", "roleName": "r_w_user", "token": e.response.Data["token"]}
+	expectedResp := map[string]interface{}{"clientId": e.response.Data["clientId"], "generatedOn": e.response.Data["generatedOn"], "logicalName": "org1", "metadata": map[string]string(nil), "orgId": "03acd0a6-1451-4827-b206-81ad1099f1a1", "roleName": "r_w_user", "token": e.response.Data["token"]}
 	require.NotNil(t, resp)
 	require.Equal(t, expectedResp, resp.Data)
 	require.Nil(t, err)
@@ -171,7 +170,7 @@ func (e *testEnv) RenewToken(t *testing.T) {
 		Operation: logical.RenewOperation,
 		Path:      "org/token",
 		Storage:   e.Storage,
-		Secret: e.response.Secret,
+		Secret:    e.response.Secret,
 		Data: map[string]interface{}{
 			"orgId": e.OrgId,
 		},
@@ -189,7 +188,7 @@ func (e *testEnv) RevokeToken(t *testing.T) {
 		Operation: logical.RevokeOperation,
 		Path:      "org/token",
 		Storage:   e.Storage,
-		Secret: e.response.Secret,
+		Secret:    e.response.Secret,
 		Data: map[string]interface{}{
 			"orgId": e.OrgId,
 		},
@@ -198,7 +197,6 @@ func (e *testEnv) RevokeToken(t *testing.T) {
 	require.Nil(t, resp)
 	require.Nil(t, err)
 }
-
 
 // CleanupUserTokens removes the tokens
 // when the test completes.
@@ -212,16 +210,14 @@ func (e *testEnv) CleanupUserTokens(t *testing.T) {
 		Path:      "org/token",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-			"role_name": e.RoleName,
-			"org_id": e.OrgId,
+			"role_name":    e.RoleName,
+			"org_id":       e.OrgId,
 			"logical_name": e.LogicalName,
 		},
 	}
-	
+
 	resp, err := e.Backend.HandleRequest(e.Context, req)
 	require.Nil(t, resp)
 	require.Nil(t, err)
-	
+
 }
-
-
