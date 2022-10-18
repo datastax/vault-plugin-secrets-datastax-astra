@@ -18,6 +18,7 @@ import (
 const (
 	credsPath     = "org/token"
 	credsListPath = "org/tokens/?"
+	pluginversion = "Vault-Plugin v1.0.0" 
 )
 
 // pathCredentials extends the Vault API with a `/token` endpoint for a role.
@@ -198,6 +199,7 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 	}
 	httpReq.Header.Add("Content-Type", "application/json")
 	httpReq.Header.Add("Authorization", "Bearer "+conf.AstraToken)
+	httpReq.Header.Add("User-Agent", pluginversion)
 	res, err := client.Do(httpReq)
 	if err != nil {
 		msg := "error sending request " + err.Error()
@@ -288,6 +290,7 @@ func (b *datastaxAstraBackend) pathTokenDelete(ctx context.Context, req *logical
 				}
 				httpReq.Header.Add("Content-Type", "application/json")
 				httpReq.Header.Add("Authorization", "Bearer "+conf.AstraToken)
+				httpReq.Header.Add("User-Agent", pluginversion)
 				res, err := client.Do(httpReq)
 				if err != nil {
 					msg := "error sending request " + err.Error()
@@ -357,6 +360,7 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 				}
 				httpReq.Header.Add("Content-Type", "application/json")
 				httpReq.Header.Add("Authorization", "Bearer "+conf.AstraToken)
+				httpReq.Header.Add("User-Agent", pluginversion)
 				res, err := client.Do(httpReq)
 				if err != nil {
 					msg := "error sending request " + err.Error()

@@ -6,7 +6,7 @@ GO_BUILD := go build -ldflags '-s -w -extldflags "-static"' -a
 PLUGIN_DIR := bin
 PLUGIN_NAME := vault-plugin-secrets-datastax-astra
 PLUGIN_PATH := $(PLUGIN_DIR)/$(PLUGIN_NAME)
-VERSION:=v0.0.1
+VERSION:=v1.0.0
 DIST_DIR := bin/dist
 
 build:
