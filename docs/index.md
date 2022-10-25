@@ -14,11 +14,20 @@ Consequently, there's no audit trail of who has downloaded and used tokens, and 
 
 Astra DB Plugin for HashiCorp Vault solves these security management issues. To ensure that your token ownership and usage are well understood, the plugin gives you the ability to associate metadata with tokens -- such as the user who created each token, and what it is being used for -- and logs who has accessed the tokens. 
 
+Astra DB Plugin for HashiCorp Vault also gives you the ability to create and manage dynamic tokens outside of Astra Portal, which can then be used by your client applications that access Astra DB data. Using `vault` commands, authorized administrators can rotate tokens based on a token's lifetime lease. Specifically, you can: 
+
+* Define a default lease time
+* Create new tokens with lease settings
+* List tokens by each one's Client ID
+* Renew a lease
+* View lease details
+* List all leases
+
 ## What is HashiCorp Vault?
 
 HashiCorp Vault is a widely-used solution across the tech industry. It's an identity-based secrets and encryption management system. HashiCorp Vault provides key-value encryption services that are gated by authentication and authorization methods. Access to tokens, secrets, and other sensitive data are securely stored, managed, and tightly controlled. Audit trails are provided. HashiCorp Vault is also extensible via a variety of interfaces, allowing plugins (including Astra DB Plugin for HashiCorp Vault) to contribute to this ecosystem.
 
-Astra DB Plugin for HashiCorp Vault is offered as a Public Beta under the [Apache 2.0](../LICENSE.txt) license.
+Astra DB Plugin for HashiCorp Vault is offered under the open-source [Apache 2.0](../LICENSE.txt) license.
 
 ## Benefits
 
@@ -27,8 +36,7 @@ You can use Astra DB Plugin for HashiCorp Vault to:
 * Log access to Astra DB tokens
 * Create and revoke Astra DB tokens
 * Associate metadata with Astra DB tokens for tracking purposes, in effect annotating each token's ownership &amp; purpose
-
-The plugin's roadmap includes dynamic tokens; that is, the additional ability to rotate tokens based on a token's lifetime lease.
+* Rotate tokens based on a token's lifetime lease, using `vault` commands to set token lease defaults, expirations, and renewals to match your security requirements
 
 For related details, see the [HashiCorp Vault](https://www.hashicorp.com/products/vault) documentation.
 
@@ -38,7 +46,9 @@ Check out this introductory, YouTube-hosted video on the DataStax Developers cha
 
 [![Astra DB Plugin for HashiCorp Vault video](https://img.youtube.com/vi/_NUK6-omsyA/0.jpg)](https://www.youtube.com/watch?v=_NUK6-omsyA)
 
-Running time: 4:16
+( **TODO** :  We will update the video to introduce the new dynamic token management features! ) 
+
+Running time: ( **TODO** : update when new video is available ) 
 
 ## Prerequisites
 
@@ -161,7 +171,14 @@ There are several tasks you can submit with HashiCorp Vault commands:
 * Add a root token for each Astra DB organization
 * Read and list configurations
 * Generate HashiCorp Vault roles from Astra DB roles
-* Generate new tokens and attach meaningful, custom metadata for your company's tracking and auditing purposes
+* Generate new tokens, set the lease time, and attach meaningful custom metadata for your company's tracking and auditing purposes. Features include the ability to:
+    - Define a default lease time
+    - Create new tokens with lease settings
+    - Renew a lease
+* In addition, you can:
+    - List a token by Client ID
+    - List lease details
+    - List all leases
 
 In this example, assume a company has three Astra DB organizations:
 
@@ -175,18 +192,19 @@ Follow these steps:
 
 	```bash
 	vault write astra/config org_id="<ORG ID>" astra_token="<YOUR ASTRA ADMINISTRATOR APP TOKEN>" \
- 	 url="https://api.astra.datastax.com" logical_name="<YOUR LOGICAL NAME>"
+ 	url="https://api.astra.datastax.com" logical_name="<YOUR LOGICAL NAME>"
 	```
 
-	**TIP:** To get your `astra_token` value, in [Astra DB console](https://astra.datastax.com), login and go to Organization Settings > Token Management > Select Role: Organization Administrator. Click **Generate Token**. Copy the generated token from the resulting dialog. Example:
+	**TIP:** To get your `astra_token` value, in [Astra Portal](https://astra.datastax.com), login and go to Organization Settings > Token Management > Select Role: Organization Administrator. Click **Generate Token**. Copy the generated token from the resulting dialog. Example:
 
 	![Sample UI with generated token value](images/astra-db-plugin-hashi-vault-generated-token2.png)
 
 	Here's an example `vault` command to create a root token for the first organization:
 
 	```bash
-	vault write astra/config org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" astra_token="AstraCS:ONqZCOkoDjGmDhEwJLiCvsSe:608ba0291db907bc45d5c190219" \
-	 url="https://api.astra.datastax.com" logical_name="retailOrg"
+	vault write astra/config org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \
+	astra_token="AstraCS:ONqZCOkoDjGmDhEwJLiCvsSe:608ba0291db907bc45d5c190219" \
+	url="https://api.astra.datastax.com" logical_name="retailOrg"
 	```
 	**Output:**
 	```bash
@@ -198,15 +216,17 @@ Follow these steps:
 	Submit a `vault write astra/config ...` command for each organization by providing its unique identifiers. Remember to also specify a unique `logical_name` value, such as `logical_name="wholesaleOrg"`.  Examples:
 
 	```bash
-	vault write astra/config org_id="Some0therOrgId_aaa999999_bbbb_4ad3_ccc99903d" astra_token="AstraCS:Some0therUniqueTokenF0rThisOrg999" \
-	 url="https://api.astra.datastax.com" logical_name="wholesaleOrg"
+	vault write astra/config org_id="Some0therOrgId_aaa999999_bbbb_4ad3_ccc99903d" \
+	astra_token="AstraCS:Some0therUniqueTokenF0rThisOrg999" \
+	url="https://api.astra.datastax.com" logical_name="wholesaleOrg"
 	```
 
 	And:
 
 	```bash
-	vault write astra/config org_id="Y3tAnotherOrgId_aaa777777_bbbb_4ad3_ccc77777d" astra_token="AstraCS:YetAn0therUniqueTokenF0rThisOrg777" \
-	 url="https://api.astra.datastax.com" logical_name="internalOrg"
+	vault write astra/config org_id="Y3tAnotherOrgId_aaa777777_bbbb_4ad3_ccc77777d" \
+	astra_token="AstraCS:YetAn0therUniqueTokenF0rThisOrg777" \
+	url="https://api.astra.datastax.com" logical_name="internalOrg"
 	```
 
 2. List the created organization/token configurations:
@@ -271,20 +291,29 @@ Follow these steps:
 	```
 
 	Also available is the `vault delete astra/role org_id="<ORG ID>" role="<ROLE NAME>"` command.
-
-5. For any of the roles, you can use HashiCorp Vault to generate a new Astra DB token. Example:
+	
+5. Define a default lease time. Example:
 
 	```bash
-	vault write astra/org/token org_id="<ORG ID>" role_name="<ROLE NAME>"
+	vault write astra/config \
+	org_id=astra_token=AstraCS:YlABLSDOEMpQlrdWoLLJyzAh:8e34d55b6d774a7822ad87df2e502774749dc5549fd7e2bd248af307bee4ca8b \
+	url=https://api.astra.datastax.com logical_name=org_logical_name renewal_time="4h"
 	```
 
-	**TIP:** You can also apply custom, meaningful metadata to the generated Astra DB token by adding one or more `metadata` parameters. The metadata names and values can be any free-form text that you want. Example:
+6. For any of the roles, you can use HashiCorp Vault to generate a new Astra DB token. In this example, we'll also specify a lease time that overrides the default. Example:
+
+	```bash
+	vault write astra/org/token org_id=7e811ca5-bec5-4ef4-be96-dd24d5284e5c \
+	role_name=Admin_Svc_Acct logical_name="My new token" lease_time=10m 
+	```
+
+	**TIP:** You can apply custom meaningful metadata to the generated Astra DB token by adding one or more `metadata` parameters. The metadata names and values can be any free-form text that you want. Here we'll also specify a lease_time. Example:
 
 	```bash
 	vault write astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" role_name="organization_administrator" \
-	 metadata="user=mrsmart" metadata="purpose=demo"
+	metadata="user=mrsmart" metadata="purpose=demo" lease_time=20m 
 	```
-
+	
 	The command output displays the new token's properties, including:
 
 	* `clientId` (you'll see this value in Astra DB console too)
@@ -292,13 +321,38 @@ Follow these steps:
 	* `metadata` (example: `map[purpose=demo user=mrsmart]`)
 	* `orgId` (its value)
 	* `token` (example: its `AstraCS:<generated-token-id>` value)
+	* `lease_time` (its value)
 
 	With the newly generated token, you can now make calls to Astra DB via its APIs.
-
-6. You can also delete tokens. Example:
+	
+7.  List token by client ID. Example:
 
 	```bash
-	vault delete astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" role_name="organization_administrator"
+	vault read astra/org/token client_id="ZqUojmgGxvfjhzlJYFqSZjyb" 
+	```
+
+8. Renew a lease. In this example, `UuS2JYK9k5Di9dW9Zq4Ip3v1` is the *Lease ID*:
+
+	```bash
+	vault lease renew astra/org/token/UuS2JYK9k5Di9dW9Zq4Ip3v1
+	
+9. View lease detail. Example where again `UuS2JYK9k5Di9dW9Zq4Ip3v1` is the *Lease ID*:
+
+	```bash
+	vault lease lookup astra/org/token/UuS2JYK9k5Di9dW9Zq4Ip3v1
+	```
+	
+10. List all leases. Example:
+
+	```bash
+	vault list sys/leases/lookup/astra/org/token
+	```
+
+11. Delete tokens based on an Astra DB `org_id` and `role_name`. Example:
+
+	```bash
+	vault delete astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \
+	role_name="organization_administrator"
 	```
 
 	**Output:**
@@ -318,7 +372,7 @@ Astra DB Plugin for HashiCorp Vault is an open source project. In this GitHub re
 
 See the following resources:
 
-* [Video introduction](https://youtu.be/_NUK6-omsyA) on YouTube
+* [Video introduction](https://youtu.be/_NUK6-omsyA) on YouTube ( TODO: update with link to revised video )  
 * [HashiCorp Vault](https://www.hashicorp.com/products/vault) documentation
 * [How to generate tokens in Astra DB](https://docs.datastax.com/en/astra/docs/manage/org/managing-org.html#_manage_application_tokens) 
 * [Astra DB user permissions](https://docs.datastax.com/en/astra/docs/manage/org/user-permissions.html)
