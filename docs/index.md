@@ -178,14 +178,14 @@ Follow these steps:
  	 url="https://api.astra.datastax.com" logical_name="<YOUR LOGICAL NAME>"
 	```
 
-	**TIP:** To get your `astra_token` value, in [Astra DB console](https://astra.datastax.com), login and go to Organization Settings > Token Management > Select Role: Organization Administrator. Click **Generate Token**. Copy the generated token from the resulting dialog. Example:
+	**TIP:** To get your `astra_token` value, in [Astra DB console](https://astra.datastax.com), login and go to Organization Settings > Token Management > Select Role: Organization Administrator. Click **Generate Token**. Copy the generated token from the resulting dialog. In the following example, the ID values have been obfuscated:
 
-	![Sample UI with generated token value](images/astra-db-plugin-hashi-vault-generated-token2.png)
+	![Sample UI with generated but obfuscated token value](images/astra-db-plugin-hashi-vault-generated-token3.png)
 
 	Here's an example `vault` command to create a root token for the first organization:
 
 	```bash
-	vault write astra/config org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" astra_token="AstraCS:ONqZCOkoDjGmDhEwJLiCvsSe:608ba0291db907bc45d5c190219" \
+	vault write astra/config org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" astra_token="AstraCS:ONqZCOAAAAAAAAAAAAAAAAe:608ba9999999999999190219" \
 	 url="https://api.astra.datastax.com" logical_name="retailOrg"
 	```
 	**Output:**
