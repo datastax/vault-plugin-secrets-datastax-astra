@@ -2,7 +2,7 @@
 
 Welcome developers, security and database administrators, site reliability engineers, and operators. 
 
-This open-source project, DataStax Astra DB Plugin for HashiCorp Vault, adds robust **token lifecycle management** features for Astra DB. Due to the nature of the Astra DB object hierarchy, by default, API tokens are not associated with specific users and currently the tokens do not have metadata descriptions. 
+This open-source project, DataStax Astra DB Plugin for HashiCorp Vault, adds robust **token lifecycle management** features for Astra DB. For those who may not be familiar, [Astra DB](https://docs.datastax.com/en/astra-serverless/docs/) is a serverless, multi-cloud native DBaaS built on Apache Cassandra&reg;. Due to the nature of the Astra DB object hierarchy, by default, API tokens are not associated with specific users and currently the tokens do not have metadata descriptions. 
 
 Without the plugin, it's easy to lose track of:
 
@@ -19,13 +19,15 @@ Astra DB Plugin for HashiCorp Vault also gives you the ability to create and man
 * Define a default lease time
 * Create new tokens with lease settings
 * List tokens by each one's Client ID
-* Renew a lease
 * View lease details
 * List all leases
+* Renew a lease
+* Revoke a token/lease before the lease expires
+* Delete a token
 
 ## What is HashiCorp Vault?
 
-HashiCorp Vault is a widely-used solution across the tech industry. It's an identity-based secrets and encryption management system. HashiCorp Vault provides key-value encryption services that are gated by authentication and authorization methods. Access to tokens, secrets, and other sensitive data are securely stored, managed, and tightly controlled. Audit trails are provided. HashiCorp Vault is also extensible via a variety of interfaces, allowing plugins (including Astra DB Plugin for HashiCorp Vault) to contribute to this ecosystem.
+[HashiCorp Vault](https://www.hashicorp.com/products/vault) is a widely-used solution across the tech industry. It's an identity-based secrets and encryption management system. HashiCorp Vault provides key-value encryption services that are gated by authentication and authorization methods. Access to tokens, secrets, and other sensitive data are securely stored, managed, and tightly controlled. Audit trails are provided. HashiCorp Vault is also extensible via a variety of interfaces, allowing plugins (including Astra DB Plugin for HashiCorp Vault) to contribute to this ecosystem.
 
 Astra DB Plugin for HashiCorp Vault is offered under the open-source [Apache 2.0](../LICENSE.txt) license.
 
@@ -36,7 +38,7 @@ You can use Astra DB Plugin for HashiCorp Vault to:
 * Log access to Astra DB tokens
 * Create and revoke Astra DB tokens
 * Associate metadata with Astra DB tokens for tracking purposes, in effect annotating each token's ownership &amp; purpose
-* Rotate tokens based on a token's lifetime lease, using `vault` commands to set token lease defaults, expirations, and renewals to match your security requirements
+* Rotate tokens based on a token's lifetime lease, using `vault` commands to set token lease defaults, expirations, renewals, and revocations to match your security requirements
 
 For related details, see the [HashiCorp Vault](https://www.hashicorp.com/products/vault) documentation.
 
@@ -175,6 +177,8 @@ There are several tasks you can submit with HashiCorp Vault commands:
     - Define a default lease time
     - Create new tokens with lease settings
     - Renew a lease
+    - Revoke a token/lease before the lease expires
+    - Delete a token
 * In addition, you can:
     - List a token by Client ID
     - List lease details
@@ -254,7 +258,7 @@ Follow these steps:
 	Key                 Value
  	---                 -----
  	astra_token         AstraCS:ONqZCOkoDjGmDhEwJLiCvsSe:608ba0291db907bc45d5c190219
-	logical_name        InternalOrg
+	logical_name        internalOrg
 	org_id              Y3tAnotherOrgId_aaa777777_bbbb_4ad3_ccc77777d
 	url                 https://api.astra.datastax.com
 	```
@@ -296,22 +300,22 @@ Follow these steps:
 
 	```bash
 	vault write astra/config \
-	org_id=astra_token=AstraCS:YlABLSDOEMpQlrdWoLLJyzAh:8e34d55b6d774a7822ad87df2e502774749dc5549fd7e2bd248af307bee4ca8b \
-	url=https://api.astra.datastax.com logical_name=org_logical_name renewal_time="4h"
+	org_id="astra_token=AstraCS:YlABLSDOEMpQlrdWoLLJyzAh:8e34d55b6d774a7822ad87df2e502774749dc5549fd7e2bd248af307bee4ca8b" \
+	url=:https://api.astra.datastax.com" logical_name="org_logical_name" renewal_time="4h"
 	```
 
 6. For any of the roles, you can use HashiCorp Vault to generate a new Astra DB token. In this example, we'll also specify a lease time that overrides the default. Example:
 
 	```bash
-	vault write astra/org/token org_id=7e811ca5-bec5-4ef4-be96-dd24d5284e5c \
-	role_name=Admin_Svc_Acct logical_name="My new token" lease_time=10m 
+	vault write astra/org/token org_id="7e811ca5-bec5-4ef4-be96-dd24d5284e5c" \
+	role_name="Admin_Svc_Acct" logical_name="My new token" lease_time=10m 
 	```
 
 	**TIP:** You can apply custom meaningful metadata to the generated Astra DB token by adding one or more `metadata` parameters. The metadata names and values can be any free-form text that you want. Here we'll also specify a lease_time. Example:
 
 	```bash
 	vault write astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" role_name="organization_administrator" \
-	metadata="user=mrsmart" metadata="purpose=demo" lease_time=20m 
+	metadata="user=mrsmart" metadata="purpose=demo" lease_time="20m" logical_name=org_logical_name
 	```
 	
 	The command output displays the new token's properties, including:
@@ -322,6 +326,7 @@ Follow these steps:
 	* `orgId` (its value)
 	* `token` (example: its `AstraCS:<generated-token-id>` value)
 	* `lease_time` (its value)
+	* `logicalName` (its value)
 
 	With the newly generated token, you can now make calls to Astra DB via its APIs.
 	
@@ -330,29 +335,37 @@ Follow these steps:
 	```bash
 	vault read astra/org/token client_id="ZqUojmgGxvfjhzlJYFqSZjyb" 
 	```
-
-8. Renew a lease. In this example, `UuS2JYK9k5Di9dW9Zq4Ip3v1` is the *Lease ID*:
-
-	```bash
-	vault lease renew astra/org/token/UuS2JYK9k5Di9dW9Zq4Ip3v1
 	
-9. View lease detail. Example where again `UuS2JYK9k5Di9dW9Zq4Ip3v1` is the *Lease ID*:
+8. View lease detail. Example where again `UuS2JYK9k5Di9dW9Zq4Ip3v1` is the *Lease ID*:
 
 	```bash
 	vault lease lookup astra/org/token/UuS2JYK9k5Di9dW9Zq4Ip3v1
 	```
 	
-10. List all leases. Example:
+9. List all leases. Example:
 
 	```bash
 	vault list sys/leases/lookup/astra/org/token
 	```
+	
+10. Renew a lease. In this example, `UuS2JYK9k5Di9dW9Zq4Ip3v1` is the *Lease ID*:
 
-11. Delete tokens based on an Astra DB `org_id` and `role_name`. Example:
+	```bash
+	vault lease renew astra/org/token/UuS2JYK9k5Di9dW9Zq4Ip3v1
+	```
+	
+11. Revoke a token/lease before it expires based on an Astra DB `org_id`, `role_name`, and `logical_name`.
+
+	```bash
+	vault revoke astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \
+	role_name="organization_administrator" logical_name="org_logical_name"
+	```
+
+12. Delete tokens based on an Astra DB `org_id`, `role_name`, and `logical_name`. Example:
 
 	```bash
 	vault delete astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \
-	role_name="organization_administrator"
+	role_name="organization_administrator" logical_name="org_logical_name"
 	```
 
 	**Output:**
