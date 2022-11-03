@@ -48,7 +48,7 @@ Check out this introductory, YouTube-hosted video on the DataStax Developers cha
 
 [![Astra DB Plugin for HashiCorp Vault video](https://img.youtube.com/vi/_NUK6-omsyA/0.jpg)](https://www.youtube.com/watch?v=_NUK6-omsyA)
 
-( **TODO** :  We will update the video to introduce the new dynamic token management features! ) 
+( **TODO** :  We will publish our updated video soon that introduces the dynamic token management features! ) 
 
 Running time: ( **TODO** : update when new video is available ) 
 
@@ -198,17 +198,17 @@ Follow these steps:
 	vault write astra/config org_id="<ORG ID>" astra_token="<YOUR ASTRA ADMINISTRATOR APP TOKEN>" \
  	url="https://api.astra.datastax.com" logical_name="<YOUR LOGICAL NAME>"
 	```
-
+  
 	**TIP:** To get your `astra_token` value, in [Astra Portal](https://astra.datastax.com), login and go to Organization Settings > Token Management > Select Role: Organization Administrator. Click **Generate Token**. Copy the generated token from the resulting dialog. Example:
 
-	![Sample UI with generated token value](images/astra-db-plugin-hashi-vault-generated-token2.png)
+	![Sample UI with generated but obfuscated token value](images/astra-db-plugin-hashi-vault-generated-token3.png)
 
 	Here's an example `vault` command to create a root token for the first organization:
 
 	```bash
-	vault write astra/config org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \
-	astra_token="AstraCS:ONqZCOkoDjGmDhEwJLiCvsSe:608ba0291db907bc45d5c190219" \
-	url="https://api.astra.datastax.com" logical_name="retailOrg"
+	vault write astra/config org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \ 
+  astra_token="AstraCS:ONqZCOAAAAAAAAAAAAAAAAe:608ba9999999999999190219" \
+	 url="https://api.astra.datastax.com" logical_name="retailOrg"
 	```
 	**Output:**
 	```bash
@@ -308,10 +308,10 @@ Follow these steps:
 
 	```bash
 	vault write astra/org/token org_id="7e811ca5-bec5-4ef4-be96-dd24d5284e5c" \
-	role_name="Admin_Svc_Acct" logical_name="internalOrg" lease_time=10m 
+	role_name="Admin_Svc_Acct" logical_name="internalOrg" lease_time="10m" 
 	```
 
-	**TIP:** You can apply custom meaningful metadata to the generated Astra DB token by adding one or more `metadata` parameters. The metadata names and values can be any free-form text that you want. Here we'll also specify a lease_time. Example:
+	**TIP:** You can apply custom meaningful metadata to the generated Astra DB token by adding one or more `metadata` parameters. The metadata names and values can be any free-form text that you want. Here we'll also specify a `lease_time`. Example:
 
 	```bash
 	vault write astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" role_name="organization_administrator" \
@@ -325,7 +325,7 @@ Follow these steps:
 	* `metadata` (example: `map[purpose=demo user=mrsmart]`)
 	* `orgId` (its value)
 	* `token` (example: its `AstraCS:<generated-token-id>` value)
-	* `lease_time` (its value)
+	* `leaseTime` (its value)
 	* `logicalName` (its value)
 
 	With the newly generated token, you can now make calls to Astra DB via its APIs.
