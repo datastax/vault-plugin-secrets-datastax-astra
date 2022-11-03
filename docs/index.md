@@ -301,21 +301,21 @@ Follow these steps:
 	```bash
 	vault write astra/config \
 	org_id="astra_token=AstraCS:YlABLSDOEMpQlrdWoLLJyzAh:8e34d55b6d774a7822ad87df2e502774749dc5549fd7e2bd248af307bee4ca8b" \
-	url=:https://api.astra.datastax.com" logical_name="org_logical_name" renewal_time="4h"
+	url=:https://api.astra.datastax.com" logical_name="internalOrg" renewal_time="4h"
 	```
 
 6. For any of the roles, you can use HashiCorp Vault to generate a new Astra DB token. In this example, we'll also specify a lease time that overrides the default. Example:
 
 	```bash
 	vault write astra/org/token org_id="7e811ca5-bec5-4ef4-be96-dd24d5284e5c" \
-	role_name="Admin_Svc_Acct" logical_name="My new token" lease_time=10m 
+	role_name="Admin_Svc_Acct" logical_name="internalOrg" lease_time=10m 
 	```
 
 	**TIP:** You can apply custom meaningful metadata to the generated Astra DB token by adding one or more `metadata` parameters. The metadata names and values can be any free-form text that you want. Here we'll also specify a lease_time. Example:
 
 	```bash
 	vault write astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" role_name="organization_administrator" \
-	metadata="user=mrsmart" metadata="purpose=demo" lease_time="20m" logical_name=org_logical_name
+	metadata="user=mrsmart" metadata="purpose=demo" lease_time="20m" logical_name="internalOrg"
 	```
 	
 	The command output displays the new token's properties, including:
@@ -336,10 +336,10 @@ Follow these steps:
 	vault read astra/org/token client_id="ZqUojmgGxvfjhzlJYFqSZjyb" 
 	```
 	
-8. View lease detail. Example where again `UuS2JYK9k5Di9dW9Zq4Ip3v1` is the *Lease ID*:
+8. View lease detail. Example where `UuS2JYK999999999999Ip3v1` is a redacted *Lease ID*:
 
 	```bash
-	vault lease lookup astra/org/token/UuS2JYK9k5Di9dW9Zq4Ip3v1
+	vault lease lookup astra/org/token/UuS2JYK999999999999Ip3v1
 	```
 	
 9. List all leases. Example:
@@ -348,17 +348,16 @@ Follow these steps:
 	vault list sys/leases/lookup/astra/org/token
 	```
 	
-10. Renew a lease. In this example, `UuS2JYK9k5Di9dW9Zq4Ip3v1` is the *Lease ID*:
+10. Renew a lease. Example where `UuS2JYK999999999999Ip3v1` is the redacted *Lease ID*:
 
 	```bash
-	vault lease renew astra/org/token/UuS2JYK9k5Di9dW9Zq4Ip3v1
+	vault lease renew astra/org/token/UuS2JYK999999999999Ip3v1
 	```
 	
-11. Revoke a token/lease before it expires based on an Astra DB `org_id`, `role_name`, and `logical_name`.
+11. Revoke a token/lease before it expires based on *Lease ID*. Example where `UuS2JYK999999999999Ip3v1` is the redacted *Lease ID*::
 
 	```bash
-	vault revoke astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \
-	role_name="organization_administrator" logical_name="org_logical_name"
+	vault lease revoke astra/org/token/UuS2JYK999999999999Ip3v1
 	```
 
 12. Delete tokens based on an Astra DB `org_id`, `role_name`, and `logical_name`. Example:
