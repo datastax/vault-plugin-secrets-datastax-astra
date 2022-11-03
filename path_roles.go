@@ -125,7 +125,7 @@ func (b *datastaxAstraBackend) pathRoleDelete(ctx context.Context, req *logical.
 	}
 	orgId, ok := d.GetOk("org_id")
 	if !ok {
-		return nil, errors.New("role name not provided")
+		return nil, errors.New("org_id not provided")
 	}
 
 	if err := req.Storage.Delete(ctx, "role/"+orgId.(string)+"-"+roleName.(string)); err != nil {
