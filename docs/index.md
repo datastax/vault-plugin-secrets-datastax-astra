@@ -301,7 +301,7 @@ Follow these steps:
 	```bash
 	vault write astra/config \
 	org_id="astra_token=AstraCS:YlABLSDOEMpQlrdWoLLJyzAh:8e34d55b6d774a7822ad87df2e502774749dc5549fd7e2bd248af307bee4ca8b" \
-	url=:https://api.astra.datastax.com" logical_name="internalOrg" renewal_time="4h"
+	url="https://api.astra.datastax.com" logical_name="internalOrg" renewal_time="4h"
 	```
 
 6. For any of the roles, you can use HashiCorp Vault to generate a new Astra DB token. In this example, we'll also specify a lease time that overrides the default. Example:
