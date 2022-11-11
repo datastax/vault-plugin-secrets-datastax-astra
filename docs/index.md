@@ -46,11 +46,9 @@ For related details, see the [HashiCorp Vault](https://www.hashicorp.com/product
 
 Check out this introductory, YouTube-hosted video on the DataStax Developers channel:
 
-[![Astra DB Plugin for HashiCorp Vault video](https://img.youtube.com/vi/_NUK6-omsyA/0.jpg)](https://www.youtube.com/watch?v=_NUK6-omsyA)
+[![Astra DB Plugin for HashiCorp Vault video](https://img.youtube.com/vi/alcSZFcVvDk/0.jpg)](https://www.youtube.com/watch?v=alcSZFcVvDk)
 
-( **TODO** :  We will publish our updated video soon that introduces the dynamic token management features! ) 
-
-Running time: ( **TODO** : update when new video is available ) 
+Running time: 4:05
 
 ## Prerequisites
 
