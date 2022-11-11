@@ -48,7 +48,7 @@ Check out this introductory, YouTube-hosted video on the DataStax Developers cha
 
 [![Astra DB Plugin for HashiCorp Vault video](https://img.youtube.com/vi/alcSZFcVvDk/0.jpg)](https://www.youtube.com/watch?v=alcSZFcVvDk)
 
-Running time: 4:05
+Running time: 4:32
 
 ## Prerequisites
 
@@ -382,7 +382,7 @@ Astra DB Plugin for HashiCorp Vault is an open source project. In this GitHub re
 
 See the following resources:
 
-* [Video introduction](https://youtu.be/_NUK6-omsyA) on YouTube ( TODO: update with link to revised video )  
+* [Video introduction](https://youtu.be/alcSZFcVvDk) on YouTube 
 * [HashiCorp Vault](https://www.hashicorp.com/products/vault) documentation
 * [How to generate tokens in Astra DB](https://docs.datastax.com/en/astra/docs/manage/org/managing-org.html#_manage_application_tokens) 
 * [Astra DB user permissions](https://docs.datastax.com/en/astra/docs/manage/org/user-permissions.html)
