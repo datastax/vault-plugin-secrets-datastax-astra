@@ -204,9 +204,9 @@ Follow these steps:
 	Here's an example `vault` command to create a root token for the first organization:
 
 	```bash
-	vault write astra/config org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \ 
-  astra_token="AstraCS:ONqZCOAAAAAAAAAAAAAAAAe:608ba9999999999999190219" \
-	 url="https://api.astra.datastax.com" logical_name="retailOrg"
+	vault write astra/config org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \
+	astra_token="AstraCS:ONqZCOAAAAAAAAAAAAAAAAe:608ba9999999999999190219" \
+	url="https://api.astra.datastax.com" logical_name="retailOrg"
 	```
 	**Output:**
 	```bash
