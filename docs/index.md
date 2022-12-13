@@ -22,7 +22,8 @@ Astra DB Plugin for HashiCorp Vault also gives you the ability to create and man
 * View lease details
 * List all leases
 * Renew a lease
-* Revoke a token/lease before the lease expires
+* Specify a lease duration during renewal
+* Revoke a lease before it expires
 * Delete a token
 
 ## What is HashiCorp Vault?
@@ -346,19 +347,29 @@ Follow these steps:
 	vault list sys/leases/lookup/astra/org/token
 	```
 	
-10. Renew a lease. Example where `UuS2JYK999999999999Ip3v1` is the redacted *Lease ID*:
+10. Renew a lease. Example where `UuS2JYK999999999999Ip3v1` is a redacted *Lease ID*:
 
 	```bash
 	vault lease renew astra/org/token/UuS2JYK999999999999Ip3v1
 	```
 	
-11. Revoke a token/lease before it expires based on *Lease ID*. Example where `UuS2JYK999999999999Ip3v1` is the redacted *Lease ID*::
+11. Specify a lease duration during renewal. 
+
+	For example, you can specify the lease duration if you renew it before the lease expires. Otherwise, if the lease renews automatically, it defaults to configuration time. 
+
+	Example where we specify the lease duration during renewal with the `-increment` option (number of seconds), and where `UuS2JYK999999999999Ip3v1` is a redacted *Lease ID*:  
+
+	```bash
+	vault lease renew -increment=604800 astra/org/token/UuS2JYK999999999999Ip3v1
+	```
+
+12. Revoke a lease before it expires based on *Lease ID*. Example where `UuS2JYK999999999999Ip3v1` is the redacted *Lease ID*::
 
 	```bash
 	vault lease revoke astra/org/token/UuS2JYK999999999999Ip3v1
 	```
 
-12. Delete tokens based on an Astra DB `org_id`, `role_name`, and `logical_name`. Example:
+13. Delete tokens based on an Astra DB `org_id`, `role_name`, and `logical_name`. Example:
 
 	```bash
 	vault delete astra/org/token org_id="ccd999999_facd_4ad3_bbb99903d999999999999999d" \
