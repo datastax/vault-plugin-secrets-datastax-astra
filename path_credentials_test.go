@@ -28,16 +28,17 @@ func newAcceptanceTestEnv() (*testEnv, error) {
 		return nil, err
 	}
 	return &testEnv{
-		AstraToken: envVarAstraToken,
-		URL: envVarAstraURL,
-		OrgId:      envVarAstraOrgId,
+		AstraToken:  envVarAstraToken,
+		URL:         envVarAstraURL,
+		OrgId:       envVarAstraOrgId,
 		LogicalName: envVarAstraLogicalName,
-		RoleName: envVarRoleName,
-		LeaseTime: envVarLeaseTime,
+		RoleName:    envVarRoleName,
+		LeaseTime:   envVarLeaseTime,
 		RenewalTime: envVarRenewalTime,
-		Backend:  b,
-		Context:  ctx,
-		Storage:  &logical.InmemStorage{},
+		RoleId:      envVarRoleId,
+		Backend:     b,
+		Context:     ctx,
+		Storage:     &logical.InmemStorage{},
 	}, nil
 }
 

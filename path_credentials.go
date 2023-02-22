@@ -18,7 +18,7 @@ import (
 const (
 	credsPath     = "org/token"
 	credsListPath = "org/tokens/?"
-	pluginversion = "Vault-Plugin v1.0.0" 
+	pluginversion = "Vault-Plugin v1.0.0"
 )
 
 // pathCredentials extends the Vault API with a `/token` endpoint for a role.
@@ -229,6 +229,7 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 	internalData := map[string]interface{}{
 		"token":    token.Token,
 		"metadata": token.Metadata,
+		"orgId":    token.OrgID,
 	}
 
 	err = saveToken(ctx, token, req.Storage)
@@ -381,9 +382,9 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 
 func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	resp := &logical.Response{Secret: req.Secret}
-	uuid:= req.Data["orgId"]
-	configData, err:= getConfig(ctx, req.Storage, uuid.(string))
-	if err != nil{
+	uuid := req.Secret.InternalData["orgId"]
+	configData, err := getConfig(ctx, req.Storage, uuid.(string))
+	if err != nil {
 		resp.Secret.TTL = 24 * time.Hour
 		return resp, errors.New("error getting config data. lease time set to 24h")
 	}
@@ -392,7 +393,7 @@ func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Requ
 		resp.Secret.TTL = 24 * time.Hour
 		return resp, nil
 	}
-	parsedRenewalTime, err := time.ParseDuration(renewal_time) 
+	parsedRenewalTime, err := time.ParseDuration(renewal_time)
 	if err != nil {
 		resp.Secret.TTL = 24 * time.Hour
 		return resp, errors.New("error parsing default lease time. lease time set to 24h")

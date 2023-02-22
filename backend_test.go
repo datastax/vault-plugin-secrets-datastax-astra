@@ -19,6 +19,7 @@ const (
 	envVarRoleName         = ""
 	envVarLeaseTime        = ""
 	envVarRenewalTime      = ""
+	envVarRoleId           = ""
 )
 
 // getTestBackend will help you construct a test backend object.
@@ -48,6 +49,7 @@ type testEnv struct {
 	RoleName    string
 	LeaseTime   string
 	RenewalTime string
+	RoleId      string
 	response    *logical.Response
 
 	Backend logical.Backend
@@ -85,8 +87,9 @@ func (e *testEnv) AddUserTokenRole(t *testing.T) {
 		Path:      "role",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-			"role":   e.RoleName,
-			"org_id": e.OrgId,
+			"role_id": e.RoleId,
+			"role":    e.RoleName,
+			"org_id":  e.OrgId,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
