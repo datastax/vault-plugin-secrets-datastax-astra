@@ -2,29 +2,17 @@ package datastax_astra
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/sha256"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strings"
-
-	"time"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-)
-
-const (
-	credsPath     = "org/token"
-	credsListPath = "org/tokens/?"
-	pluginversion = "Vault-Plugin v1.0.0"
 )
 
 // pathCredentials extends the Vault API with a `/token` endpoint for a role.
 func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 	return &framework.Path{
-		Pattern: credsPath,
+		Pattern: "org/token",
 		Fields: map[string]*framework.FieldSchema{
 			"org_id": {
 				Type:        framework.TypeString,
@@ -37,15 +25,15 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 			"role_name": {
 				Type:        framework.TypeLowerCaseString,
 				Description: "name of the role for which token is being requested",
-				Required:    true,
+				Required:    false,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Sensitive: false,
 				},
 			},
 			"logical_name": {
 				Type:        framework.TypeLowerCaseString,
-				Description: "Logical name to reference this token by",
-				Required:    true,
+				Description: "Logical name to reference this token by. Ignored if running in sidecar mode",
+				Required:    false,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Sensitive: false,
 				},
@@ -58,94 +46,54 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 			},
 			"client_id": {
 				Type:        framework.TypeString,
-				Description: "ClientId for the token",
+				Description: "ClientId for the token. Ignored if running in sidecar mode",
 				Required:    false,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Sensitive: false,
 				},
-			},
-			"lease_time": {
-				Type:        framework.TypeString,
-				Description: "leaseTime in seconds, minutes or hours for the token. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
-				Required:    false,
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCredentialsRead,
 			},
-			logical.CreateOperation: &framework.PathOperation{Callback: b.pathCredentialsWrite},
-			logical.UpdateOperation: &framework.PathOperation{Callback: b.pathCredentialsWrite},
-			logical.DeleteOperation: &framework.PathOperation{Callback: b.pathTokenDelete},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCredentialsUpdate,
+			},
 		},
 		HelpSynopsis:    pathCredentialsHelpSyn,
 		HelpDescription: pathCredentialsHelpDesc,
 	}
 }
 
-// pathCredentialsRead reads a token from vault.
-func (b *datastaxAstraBackend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	clientId, ok := d.GetOk("client_id")
-	if !ok {
-		roleName, ok := d.GetOk("role_name")
-		if !ok {
-			return nil, errors.New("role_name not provided")
-		}
-		orgId, ok := d.GetOk("org_id")
-		if !ok {
-			return nil, errors.New("org_id not provided")
-		}
-		logicalName, ok := d.GetOk("logical_name")
-		if !ok {
-			return nil, errors.New("logical_name not provided")
-		}
-		tokens, err := listCreds(ctx, req.Storage)
-		if err != nil {
-			return nil, errors.New("no tokens found")
-		}
-		if len(tokens) == 0 {
-			return nil, errors.New("no token found in vault")
-		}
-		for i := 0; i < len(tokens); i++ {
-			token, err := readToken(ctx, req.Storage, tokens[i])
-			if err != nil {
-				return nil, errors.New("no tokens found")
-			}
-			if doesTokenMatch(token, orgId.(string), roleName.(string), logicalName.(string)) {
-				return &logical.Response{Data: token.toResponseData()}, nil
-			}
-		}
-		return nil, errors.New("no token found that matches criteria")
-	}
-	tokens, err := listCreds(ctx, req.Storage)
+func readTokenUsingClientId(ctx context.Context, s logical.Storage, clientId string) (*astraToken, error) {
+	credsList, err := s.List(ctx, "token/")
 	if err != nil {
+		return nil, errors.New("failed to get token list: " + err.Error())
+	}
+	if len(credsList) == 0 {
 		return nil, errors.New("no tokens found")
 	}
-	if len(tokens) == 0 {
-		return nil, errors.New("no token found in vault")
-	}
-	for i := 0; i < len(tokens); i++ {
-		token, err := readToken(ctx, req.Storage, tokens[i])
+	for i := 0; i < len(credsList); i++ {
+		token, err := readToken(ctx, s, credsList[i])
 		if err != nil {
-			return nil, errors.New("no tokens found")
+			return nil, errors.New("unable to retrieve token information: " + err.Error())
 		}
-		if doesTokenMatchClientId(token, clientId.(string)) {
-			return &logical.Response{Data: token.toResponseData()}, nil
+
+		if token.ClientID == clientId {
+			return token, nil
 		}
 	}
-	return nil, errors.New("no token found that matches criteria client")
+	return nil, nil
 }
 
-func doesTokenMatchClientId(token *astraToken, clientId string) bool {
-	return token.ClientID == clientId
+func calculateTokenId(roleEntry *astraRoleEntry, logicalName string) string {
+	tokenRef := fmt.Sprintf("%s:%s:%s", roleEntry.OrgId, roleEntry.RoleName, logicalName)
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(tokenRef)))
 }
 
-func doesTokenMatch(token *astraToken, orgId, role, logicalName string) bool {
-	return token.LogicalName == logicalName && token.OrgID == orgId && token.RoleNickname == role
-}
-
-func readToken(ctx context.Context, s logical.Storage, uuid string) (*astraToken, error) {
-	token, err := s.Get(ctx, "token/"+uuid)
+func readToken(ctx context.Context, s logical.Storage, tokenId string) (*astraToken, error) {
+	token, err := s.Get(ctx, "token/"+tokenId)
 	if err != nil {
 		return nil, err
 	}
@@ -153,253 +101,246 @@ func readToken(ctx context.Context, s logical.Storage, uuid string) (*astraToken
 		return nil, nil
 	}
 	result := &astraToken{}
-	if err := token.DecodeJSON(result); err != nil {
+	err = token.DecodeJSON(result)
+	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
-func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleName, ok := d.GetOk("role_name")
-	if !ok {
-		return nil, errors.New("role_name not provided")
-	}
-	orgId, ok := d.GetOk("org_id")
-	if !ok {
-		return nil, errors.New("org_id not provided")
-	}
-	logicalName, ok := d.GetOk("logical_name")
-	if !ok {
-		return nil, errors.New("logical_name not provided")
-	}
-	tok, err := readToken(ctx, req.Storage, logicalName.(string))
-	if tok != nil {
-		return nil, errors.New("token already exists for role")
-	}
-	entry, err := readRole(ctx, req.Storage, roleName.(string), orgId.(string))
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, errors.New("role does not exist. add role first")
-	}
 
-	payload := strings.NewReader(`{
-    "roles": [` + `"` + entry.RoleId + `"]}`)
-	conf, err := getConfig(ctx, req.Storage, orgId.(string))
-	if err != nil {
-		return nil, err
-	}
-	client := &http.Client{}
-	url := conf.URL + "/v2/clientIdSecrets"
-	httpReq, err := http.NewRequest(http.MethodPost, url, payload)
-
-	if err != nil {
-		msg := "error creating httpReq " + err.Error()
-		return nil, errors.New(msg)
-	}
-	httpReq.Header.Add("Content-Type", "application/json")
-	httpReq.Header.Add("Authorization", "Bearer "+conf.AstraToken)
-	httpReq.Header.Add("User-Agent", pluginversion)
-	res, err := client.Do(httpReq)
-	if err != nil {
-		msg := "error sending request " + err.Error()
-		return nil, errors.New(msg)
-	}
-	defer res.Body.Close()
-	var token *astraToken
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		msg := "error reading ioutil " + err.Error()
-		return nil, errors.New(msg)
-	}
-	err = json.Unmarshal(body, &token)
-	if err != nil {
-		msg := " Unmarshal failed " + err.Error()
-		return nil, errors.New(msg)
-	}
-	metadata, ok, err := d.GetOkErr("metadata")
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
-	}
-	if ok {
-		token.Metadata = metadata.(map[string]string)
-	}
-	token.LogicalName = logicalName.(string)
-	token.RoleNickname = roleName.(string)
-	internalData := map[string]interface{}{
-		"token":    token.Token,
-		"metadata": token.Metadata,
-		"orgId":    token.OrgID,
-	}
-
-	err = saveToken(ctx, token, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-	resp := b.Secret(astraTokenType).Response(token.toResponseData(), internalData)
-	leaseTime, ok := d.GetOk("lease_time")
-	if !ok {
-		return resp, nil
-	}
-	parseLeaseTime, _ := time.ParseDuration(leaseTime.(string))
-	resp.Secret.TTL = parseLeaseTime
-	resp.Secret.Renewable = true
-	return resp, nil
-}
-
-func (b *datastaxAstraBackend) pathTokenDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	roleName, ok := d.GetOk("role_name")
-	if !ok {
-		return nil, errors.New("role_name not provided")
-	}
-	orgId, ok := d.GetOk("org_id")
-	if !ok {
-		return nil, errors.New("org_id not provided")
-	}
-	logicalName, ok := d.GetOk("logical_name")
-	if !ok {
-		return nil, errors.New("logical_name not provided")
-	}
-	tokens, err := listCreds(ctx, req.Storage)
-	if err != nil {
-		return nil, errors.New("no tokens found")
-	}
-	if len(tokens) == 0 {
-		return nil, errors.New("no token found in vault")
-	}
-	for i := 0; i < len(tokens); i++ {
-		token, err := readToken(ctx, req.Storage, tokens[i])
-		if err != nil {
-			return nil, errors.New("no tokens found")
-		}
-		if doesTokenMatch(token, orgId.(string), roleName.(string), logicalName.(string)) {
-			err = req.Storage.Delete(ctx, "token/"+tokens[i])
-			if err != nil {
-				return nil, err
-			}
-			conf, err := getConfig(ctx, req.Storage, orgId.(string))
-			if err != nil {
-				return nil, err
-			}
-			if conf.URL != "" {
-				client := &http.Client{}
-				url := conf.URL + "/v2/clientIdSecrets/" + token.ClientID
-				httpReq, err := http.NewRequest(http.MethodDelete, url, nil)
-				if err != nil {
-					msg := "error creating httpReq " + err.Error()
-					return nil, errors.New(msg)
-				}
-				httpReq.Header.Add("Content-Type", "application/json")
-				httpReq.Header.Add("Authorization", "Bearer "+conf.AstraToken)
-				httpReq.Header.Add("User-Agent", pluginversion)
-				res, err := client.Do(httpReq)
-				if err != nil {
-					msg := "error sending request " + err.Error()
-					return nil, errors.New(msg)
-				}
-				defer res.Body.Close()
-				if res.StatusCode != http.StatusNoContent {
-					return nil, errors.New("could not delete token in astra")
-				}
-			} else {
-				return nil, errors.New("config not found")
-			}
-		}
-	}
-	b.reset()
-	return nil, nil
-}
-
-func saveToken(ctx context.Context, token *astraToken, s logical.Storage) error {
-	entry, err := logical.StorageEntryJSON("token/"+token.ClientID, token)
+func saveToken(ctx context.Context, s logical.Storage, token *astraToken, tokenId string) error {
+	entry, err := logical.StorageEntryJSON("token/"+tokenId, token)
 	if err != nil {
 		return err
 	}
-	if err = s.Put(ctx, entry); err != nil {
+	err = s.Put(ctx, entry)
+	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func doTokensMatch(token *astraToken, tokentoRevoke string) bool {
-	return token.Token == tokentoRevoke
+func (b *datastaxAstraBackend) createToken(ctx context.Context, s logical.Storage, roleEntry *astraRoleEntry, logicalName string, metadata map[string]string) (*astraToken, error) {
+	client, err := b.getClient(ctx, s, roleEntry.OrgId)
+	if err != nil {
+		return nil, err
+	}
+
+	var token *astraToken
+
+	token, err = createTokenInAstra(client, roleEntry, logicalName, metadata)
+	if err != nil {
+		errMsg := "error creating Astra token: " + err.Error()
+		b.logger.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+
+	if token == nil {
+		errMsg := "failed to create Astra token"
+		b.logger.Error(errMsg)
+		return nil, errors.New(errMsg)
+	}
+
+	// If logicalName is a non-empty string we will use that along with the org ID and role name to store the token,
+	//	otherwise use the token clientID. In standard mode the logicalName will be set a non-empty string, but in
+	//	sidecar mode it is set to an empty string.
+	var tokenId string
+	if logicalName != "" {
+		tokenId = calculateTokenId(roleEntry, logicalName)
+	} else {
+		tokenId = token.ClientID
+	}
+
+	err = saveToken(ctx, s, token, tokenId)
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
 }
 
-func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *datastaxAstraBackend) generateTokenResponse(token *astraToken, tokenId string, roleEntry *astraRoleEntry) (*logical.Response, error) {
+	resp := b.Secret(astraTokenType).Response(
+		token.ToResponseData(),
+		map[string]interface{}{
+			"orgId":    roleEntry.OrgId,
+			"clientId": token.ClientID,
+			"roleName": roleEntry.RoleName,
+			"tokenId":  tokenId,
+		})
 
-	tokenRaw, ok := req.Secret.InternalData["token"]
-	if !ok {
-		return nil, errors.New("token not retrived")
+	if roleEntry.TTL > 0 {
+		resp.Secret.TTL = roleEntry.TTL
 	}
 
-	tokens, err := listCreds(ctx, req.Storage)
-	if err != nil {
-		return nil, errors.New("no tokens found")
+	if roleEntry.MaxTTL > 0 {
+		resp.Secret.MaxTTL = roleEntry.MaxTTL
 	}
 
-	for i := 0; i < len(tokens); i++ {
-		token, err := readToken(ctx, req.Storage, tokens[i])
-		if err != nil {
-			return nil, errors.New("no tokens found")
-		}
-		if doTokensMatch(token, tokenRaw.(string)) {
-			err = req.Storage.Delete(ctx, "token/"+tokens[i])
-			if err != nil {
-				return nil, err
-			}
-			conf, err := getConfig(ctx, req.Storage, token.OrgID)
-			if err != nil {
-				return nil, err
-			}
-			if conf.URL != "" {
-				client := &http.Client{}
-				url := conf.URL + "/v2/clientIdSecrets/" + token.ClientID
-				httpReq, err := http.NewRequest(http.MethodDelete, url, nil)
-				if err != nil {
-					msg := "error creating httpReq " + err.Error()
-					return nil, errors.New(msg)
-				}
-				httpReq.Header.Add("Content-Type", "application/json")
-				httpReq.Header.Add("Authorization", "Bearer "+conf.AstraToken)
-				httpReq.Header.Add("User-Agent", pluginversion)
-				res, err := client.Do(httpReq)
-				if err != nil {
-					msg := "error sending request " + err.Error()
-					return nil, errors.New(msg)
-				}
-				defer res.Body.Close()
-				if res.StatusCode != http.StatusNoContent {
-					return nil, errors.New("could not delete token in astra")
-				}
+	resp.Secret.Renewable = true
+
+	b.logger.Info(fmt.Sprintf("Created token '%s' with TTL: %s and MaxTTL: %s", token.ClientID, roleEntry.TTL, roleEntry.MaxTTL))
+	return resp, nil
+}
+
+func (b *datastaxAstraBackend) pathCredentialsStandardMode(ctx context.Context, req *logical.Request, d *framework.FieldData, orgId string, readOnly bool) (*logical.Response, error) {
+	clientIdRaw, ok := d.GetOk("client_id")
+	if ok && readOnly {
+		clientId := clientIdRaw.(string)
+		token, err := readTokenUsingClientId(ctx, req.Storage, clientId)
+		if token == nil {
+			if err == nil {
+				// No error means no token existed with that clientId
+				return nil, errors.New("no token found with clientId " + clientId)
 			} else {
-				return nil, errors.New("config not found")
+				return nil, err
 			}
 		}
+		return &logical.Response{Data: token.ToResponseData()}, nil
 	}
-	b.reset()
+
+	roleNameRaw, ok := d.GetOk("role_name")
+	if !ok {
+		return logical.ErrorResponse("please provide a role_name argument"), nil
+	}
+	roleName := roleNameRaw.(string)
+	logicalNameRaw, ok := d.GetOk("logical_name")
+	if !ok {
+		return logical.ErrorResponse("please provide a logical_name argument"), nil
+	}
+	logicalName := logicalNameRaw.(string)
+	// In standard mode logical_name must be set to a non-empty string value, this is
+	// so we can calculate a tokenId when storing it
+	if logicalName == "" {
+		return nil, errors.New("logical_name is set to an empty string; a non-empty value must be provided")
+	}
+	roleEntry, err := readRole(ctx, req.Storage, roleName, orgId)
+	if err != nil {
+		return nil, errors.New("error retrieving role " + roleName + ": " + err.Error())
+	}
+	if roleEntry == nil {
+		return nil, errors.New("unable to find role " + roleName)
+	}
+	if roleEntry.RoleId == "" {
+		return nil, nil
+	}
+
+	tokenId := calculateTokenId(roleEntry, logicalName)
+	token, err := readToken(ctx, req.Storage, tokenId)
+	if err != nil {
+		return nil, errors.New("error attempting to retrieve token for org ID" + orgId + ", role " + roleName + ", with logical name " + logicalName + ": " + err.Error())
+	}
+
+	// Return behaviour depends on whether we are reading or writing
+	if readOnly {
+		if token == nil {
+			return nil, errors.New("unable to find token for org ID" + orgId + ", role " + roleName + ", with logical name " + logicalName)
+		}
+		return &logical.Response{Data: token.ToResponseData()}, nil
+	}
+
+	// If we are writing (not readOnly), create the token and generate a secret response
+	if token != nil {
+		return nil, errors.New("token already exists for org ID " + orgId + ", role " + roleName + ", with logical name " + logicalName)
+	}
+
+	metadata := make(map[string]string)
+	metadataRaw, ok, err := d.GetOkErr("metadata")
+	if err != nil {
+		return nil, errors.New("error parsing metadata: " + err.Error())
+	}
+	if ok {
+		metadata = metadataRaw.(map[string]string)
+	}
+
+	token, err = b.createToken(ctx, req.Storage, roleEntry, logicalName, metadata)
+	if err != nil {
+		return nil, err
+	}
+	return b.generateTokenResponse(token, tokenId, roleEntry)
+}
+
+func (b *datastaxAstraBackend) pathCredentialsSidecarMode(ctx context.Context, req *logical.Request, d *framework.FieldData, orgId string) (*logical.Response, error) {
+	roleNameRaw, ok := d.GetOk("role_name")
+	if !ok {
+		return logical.ErrorResponse("please provide a role_name argument"), nil
+	}
+	roleName := roleNameRaw.(string)
+
+	roleEntry, err := readRole(ctx, req.Storage, roleName, orgId)
+	if err != nil {
+		return nil, errors.New("error retrieving role " + roleName + ": " + err.Error())
+	}
+	if roleEntry == nil {
+		return nil, errors.New("unable to find role " + roleName)
+	}
+	if roleEntry.RoleId == "" {
+		return nil, nil
+	}
+
+	metadata := make(map[string]string)
+	metadataRaw, ok, err := d.GetOkErr("metadata")
+	if err != nil {
+		return nil, errors.New("error parsing metadata: " + err.Error())
+	}
+	if ok {
+		metadata = metadataRaw.(map[string]string)
+	}
+
+	// In sidecar mode logical_name is ignored, so make it an empty string
+	// to force storing the token using its ClientId
+	token, err := b.createToken(ctx, req.Storage, roleEntry, "", metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.generateTokenResponse(token, token.ClientID, roleEntry)
+}
+
+func (b *datastaxAstraBackend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	orgIdRaw, ok := d.GetOk("org_id")
+	if !ok {
+		return logical.ErrorResponse("please provide an org_id argument"), nil
+	}
+	orgId := orgIdRaw.(string)
+	config, err := readConfig(ctx, req.Storage, orgId)
+	if err != nil {
+		return nil, err
+	}
+	if config == nil {
+		return nil, errors.New("unable to find config for org ID" + orgId)
+	}
+
+	switch config.CallerMode {
+	case StandardCallerMode:
+		return b.pathCredentialsStandardMode(ctx, req, d, orgId, true)
+	case SidecarCallerMode:
+		return b.pathCredentialsSidecarMode(ctx, req, d, orgId)
+	}
 	return nil, nil
 }
 
-func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	resp := &logical.Response{Secret: req.Secret}
-	uuid := req.Secret.InternalData["orgId"]
-	configData, err := getConfig(ctx, req.Storage, uuid.(string))
+func (b *datastaxAstraBackend) pathCredentialsUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	orgIdRaw, ok := d.GetOk("org_id")
+	if !ok {
+		return logical.ErrorResponse("please provide an org_id argument"), nil
+	}
+	orgId := orgIdRaw.(string)
+	config, err := readConfig(ctx, req.Storage, orgId)
 	if err != nil {
-		resp.Secret.TTL = 24 * time.Hour
-		return resp, errors.New("error getting config data. lease time set to 24h")
+		return nil, err
 	}
-	renewal_time := configData.DefaultLeaseRenewTime
-	if renewal_time == "" {
-		resp.Secret.TTL = 24 * time.Hour
-		return resp, nil
+	if config == nil {
+		return nil, errors.New("unable to find config for org ID" + orgId)
 	}
-	parsedRenewalTime, err := time.ParseDuration(renewal_time)
-	if err != nil {
-		resp.Secret.TTL = 24 * time.Hour
-		return resp, errors.New("error parsing default lease time. lease time set to 24h")
+
+	switch config.CallerMode {
+	case StandardCallerMode:
+		return b.pathCredentialsStandardMode(ctx, req, d, orgId, false)
+	case SidecarCallerMode:
+		return b.pathCredentialsSidecarMode(ctx, req, d, orgId)
 	}
-	resp.Secret.TTL = parsedRenewalTime
-	return resp, nil
+	return nil, nil
 }
 
 const pathCredentialsHelpSyn = `

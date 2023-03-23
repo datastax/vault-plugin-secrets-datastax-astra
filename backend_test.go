@@ -2,24 +2,24 @@ package datastax_astra
 
 import (
 	"context"
-	"testing"
-	"time"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 )
 
 // Fill in the config details to test.
 const (
-	envVarAstraToken       = ""
-	envVarAstraOrgId       = ""
-	envVarAstraLogicalName = ""
-	envVarAstraURL         = ""
-	envVarRoleName         = ""
-	envVarLeaseTime        = ""
-	envVarRenewalTime      = ""
-	envVarRoleId           = ""
+	envVarAstraToken       = "AstraCS:Th!s1safAk3T0K3n"
+	envVarAstraOrgId       = "TestOrgId"
+	envVarAstraLogicalName = "TestLogicalName"
+	envVarAstraURL         = "http://localhost:" + mockLocalServerPort
+	envVarRoleName         = "TestRoleName"
+	envVarTTL              = 3600
+	envVarMaxTTL           = 36000
+	envVarRoleId           = "TestRoleId"
+	envVarCallerMode       = "standard"
 )
 
 // getTestBackend will help you construct a test backend object.
@@ -47,9 +47,10 @@ type testEnv struct {
 	OrgId       string
 	LogicalName string
 	RoleName    string
-	LeaseTime   string
-	RenewalTime string
+	TTL         time.Duration
+	MaxTTL      time.Duration
 	RoleId      string
+	CallerMode  string
 	response    *logical.Response
 
 	Backend logical.Backend
@@ -73,7 +74,7 @@ func (e *testEnv) AddConfig(t *testing.T) {
 			"url":          e.URL,
 			"org_id":       e.OrgId,
 			"logical_name": e.LogicalName,
-			"renewal_time": e.RenewalTime,
+			"caller_mode":  e.CallerMode,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
@@ -87,9 +88,11 @@ func (e *testEnv) AddUserTokenRole(t *testing.T) {
 		Path:      "role",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
-			"role_id": e.RoleId,
-			"role":    e.RoleName,
-			"org_id":  e.OrgId,
+			"role_id":   e.RoleId,
+			"role_name": e.RoleName,
+			"org_id":    e.OrgId,
+			"ttl":       e.TTL * time.Second,
+			"max_ttl":   e.MaxTTL * time.Second,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
@@ -99,14 +102,13 @@ func (e *testEnv) AddUserTokenRole(t *testing.T) {
 
 func (e *testEnv) WriteUserToken(t *testing.T) {
 	req := &logical.Request{
-		Operation: logical.CreateOperation,
+		Operation: logical.UpdateOperation,
 		Path:      "org/token",
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"org_id":       e.OrgId,
 			"logical_name": e.LogicalName,
 			"role_name":    e.RoleName,
-			"lease_time":   e.LeaseTime,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
@@ -142,9 +144,19 @@ func (e *testEnv) ReadUserToken(t *testing.T) {
 	require.NotNil(t, resp.Data["token"])
 	require.NotNil(t, resp.Data["orgId"])
 	require.NotNil(t, resp.Data["logicalName"])
-	expectedResp := map[string]interface{}{"clientId": e.response.Data["clientId"], "generatedOn": e.response.Data["generatedOn"], "logicalName": "org1", "metadata": map[string]string(nil), "orgId": "03acd0a6-1451-4827-b206-81ad1099f1a1", "roleName": "r_w_user", "token": e.response.Data["token"]}
+	if envVarCallerMode == "standard" {
+		expectedResp := map[string]interface{}{
+			"clientId":    e.response.Data["clientId"],
+			"generatedOn": e.response.Data["generatedOn"],
+			"logicalName": "testlogicalname",
+			"metadata":    map[string]string{},
+			"orgId":       e.OrgId,
+			"roleName":    "testrolename",
+			"token":       e.response.Data["token"],
+		}
+		require.Equal(t, expectedResp, resp.Data)
+	}
 	require.NotNil(t, resp)
-	require.Equal(t, expectedResp, resp.Data)
 	require.Nil(t, err)
 }
 
@@ -155,6 +167,7 @@ func (e *testEnv) ReadUserTokenUsingClientId(t *testing.T) {
 		Storage:   e.Storage,
 		Data: map[string]interface{}{
 			"client_id": e.response.Data["clientId"],
+			"org_id":    e.OrgId,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
@@ -162,9 +175,19 @@ func (e *testEnv) ReadUserTokenUsingClientId(t *testing.T) {
 	require.NotNil(t, resp.Data["token"])
 	require.NotNil(t, resp.Data["orgId"])
 	require.NotNil(t, resp.Data["logicalName"])
-	expectedResp := map[string]interface{}{"clientId": e.response.Data["clientId"], "generatedOn": e.response.Data["generatedOn"], "logicalName": "org1", "metadata": map[string]string(nil), "orgId": "03acd0a6-1451-4827-b206-81ad1099f1a1", "roleName": "r_w_user", "token": e.response.Data["token"]}
+	if envVarCallerMode == "standard" {
+		expectedResp := map[string]interface{}{
+			"clientId":    e.response.Data["clientId"],
+			"generatedOn": e.response.Data["generatedOn"],
+			"logicalName": "testlogicalname",
+			"metadata":    map[string]string{},
+			"orgId":       e.OrgId,
+			"roleName":    "testrolename",
+			"token":       e.response.Data["token"],
+		}
+		require.Equal(t, expectedResp, resp.Data)
+	}
 	require.NotNil(t, resp)
-	require.Equal(t, expectedResp, resp.Data)
 	require.Nil(t, err)
 }
 
@@ -175,13 +198,13 @@ func (e *testEnv) RenewToken(t *testing.T) {
 		Storage:   e.Storage,
 		Secret:    e.response.Secret,
 		Data: map[string]interface{}{
-			"orgId": e.OrgId,
+			"orgId":    e.OrgId,
+			"roleName": e.RoleName,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
 	require.NotNil(t, resp)
-	parsedRenewalTime, _ := time.ParseDuration(e.RenewalTime)
-	require.Equal(t, resp.Secret.TTL, parsedRenewalTime)
+	require.Equal(t, resp.Secret.TTL, e.TTL*time.Second)
 	require.Equal(t, e.response.Secret.LeaseID, resp.Secret.LeaseID)
 	require.Nil(t, err)
 }
@@ -193,34 +216,11 @@ func (e *testEnv) RevokeToken(t *testing.T) {
 		Storage:   e.Storage,
 		Secret:    e.response.Secret,
 		Data: map[string]interface{}{
-			"orgId": e.OrgId,
+			"orgId":    e.OrgId,
+			"roleName": e.RoleName,
 		},
 	}
 	resp, err := e.Backend.HandleRequest(e.Context, req)
 	require.Nil(t, resp)
 	require.Nil(t, err)
-}
-
-// CleanupUserTokens removes the tokens
-// when the test completes.
-func (e *testEnv) CleanupUserTokens(t *testing.T) {
-	if len(e.Tokens) == 0 {
-		t.Fatalf("expected 2 tokens, got: %d", len(e.Tokens))
-	}
-
-	req := &logical.Request{
-		Operation: logical.DeleteOperation,
-		Path:      "org/token",
-		Storage:   e.Storage,
-		Data: map[string]interface{}{
-			"role_name":    e.RoleName,
-			"org_id":       e.OrgId,
-			"logical_name": e.LogicalName,
-		},
-	}
-
-	resp, err := e.Backend.HandleRequest(e.Context, req)
-	require.Nil(t, resp)
-	require.Nil(t, err)
-
 }

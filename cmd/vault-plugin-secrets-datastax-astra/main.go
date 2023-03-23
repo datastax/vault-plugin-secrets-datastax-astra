@@ -1,10 +1,9 @@
 package main
 
 import (
-	"github.com/hashicorp/go-hclog"
+	datastax_astra "github.com/datastax/vault-plugin-secrets-datastax-astra"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/plugin"
-	datastax_astra "github.com/riptano/vault-plugin-secrets-datastax-astra"
 	"os"
 )
 
@@ -21,8 +20,7 @@ func main() {
 		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
-		logger := hclog.New(&hclog.LoggerOptions{})
-
+		logger := datastax_astra.NewLogger()
 		logger.Error("plugin shutting down", "error", err)
 		os.Exit(1)
 	}
