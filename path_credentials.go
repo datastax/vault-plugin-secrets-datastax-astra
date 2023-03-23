@@ -19,6 +19,7 @@ const (
 	credsPath     = "org/token"
 	credsListPath = "org/tokens/?"
 	pluginversion = "Vault-Plugin v1.0.0"
+	defaultMaxLeaseTime = "24h"
 )
 
 // pathCredentials extends the Vault API with a `/token` endpoint for a role.
@@ -66,7 +67,12 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 			},
 			"lease_time": {
 				Type:        framework.TypeString,
-				Description: "leaseTime in seconds, minutes or hours for the token. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
+				Description: "leaseTime in seconds, minutes or hours for the token. If this value is bigger than max_lease_time, it will be clamped to the max_lease_time value. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
+				Required:    false,
+			},
+			"max_lease_time": {
+				Type:        framework.TypeString,
+				Description: "Maximum leaseTime in seconds, minutes or hours for the token. Defaults to 24 hours. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
 				Required:    false,
 			},
 		},
@@ -242,9 +248,24 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 		return resp, nil
 	}
 	parseLeaseTime, _ := time.ParseDuration(leaseTime.(string))
+	maxLeaseTime, ok := d.GetOk("max_lease_time")
+	var rtnErr error
+	if !ok {
+		msg := "error getting Max Lease Time. Setting value to default of " + defaultMaxLeaseTime
+		rtnErr = errors.New(msg)
+		maxLeaseTime = defaultMaxLeaseTime
+	}
+	if maxLeaseTime == "" {
+		maxLeaseTime = defaultMaxLeaseTime
+	}
+	parseMaxLeaseTime, _ := time.ParseDuration(maxLeaseTime.(string))
+	if parseLeaseTime > parseMaxLeaseTime {
+		parseLeaseTime = parseMaxLeaseTime
+	}
 	resp.Secret.TTL = parseLeaseTime
+	resp.Secret.MaxTTL = parseMaxLeaseTime
 	resp.Secret.Renewable = true
-	return resp, nil
+	return resp, rtnErr
 }
 
 func (b *datastaxAstraBackend) pathTokenDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -388,12 +409,12 @@ func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Requ
 		resp.Secret.TTL = 24 * time.Hour
 		return resp, errors.New("error getting config data. lease time set to 24h")
 	}
-	renewal_time := configData.DefaultLeaseRenewTime
-	if renewal_time == "" {
+	renewalTime := configData.DefaultLeaseRenewTime
+	if renewalTime == "" {
 		resp.Secret.TTL = 24 * time.Hour
 		return resp, nil
 	}
-	parsedRenewalTime, err := time.ParseDuration(renewal_time)
+	parsedRenewalTime, err := time.ParseDuration(renewalTime)
 	if err != nil {
 		resp.Secret.TTL = 24 * time.Hour
 		return resp, errors.New("error parsing default lease time. lease time set to 24h")
