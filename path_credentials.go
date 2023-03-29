@@ -11,7 +11,6 @@ import (
 
 	"time"
 
-	"crypto/sha256"
 	"github.com/google/uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -89,17 +88,8 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 	}
 }
 
-func calculateTokenFingerprint(token *astraToken) string {
-	return calculateTokenFingerprintFromComponent(token.OrgID, token.RoleNickname, token.LogicalName)
-}
-
-func calculateTokenFingerprintFromComponent(orgId, role, logicalName string) string {
-	tokenRef := fmt.Sprintf("%s:%s:%s", orgId, role, logicalName)
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(tokenRef)))
-}
-
-func readToken(ctx context.Context, s logical.Storage, fingerprint string) (*astraToken, error) {
-	token, err := s.Get(ctx, "token/" + fingerprint)
+func readToken(ctx context.Context, s logical.Storage, clientId string) (*astraToken, error) {
+	token, err := s.Get(ctx, "token/" + clientId)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +104,7 @@ func readToken(ctx context.Context, s logical.Storage, fingerprint string) (*ast
 }
 
 func saveToken(ctx context.Context, token *astraToken, s logical.Storage) error {
-	entry, err := logical.StorageEntryJSON("token/" + calculateTokenFingerprint(token), token)
+	entry, err := logical.StorageEntryJSON("token/" + token.ClientID, token)
 	if err != nil {
 		return err
 	}
@@ -124,7 +114,17 @@ func saveToken(ctx context.Context, token *astraToken, s logical.Storage) error 
 	return nil
 }
 
-func getTokenFingerprintComponents( d *framework.FieldData) (string, string, string, error) {
+func matchToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*astraToken, error) {
+	// try to retrieve the token by its fingerprint first
+	clientId, ok := d.GetOk("client_id")
+	if !ok {
+		return nil, errors.New("unable to retrieve client_id to match token")
+	}
+
+	return readToken(ctx, req.Storage, clientId.(string))
+}
+
+func getTokenIdentifiers( d *framework.FieldData) (string, string, string, error) {
 	roleName, ok := d.GetOk("role_name")
 	if !ok {
 		return "", "", "", errors.New("role_name not provided")
@@ -140,99 +140,57 @@ func getTokenFingerprintComponents( d *framework.FieldData) (string, string, str
 	return roleName.(string), orgId.(string), logicalName.(string), nil
 }
 
-func matchToken(ctx context.Context, req *logical.Request, d *framework.FieldData) (*astraToken, error) {
-	// try to retrieve the token by its fingerprint first
-	tokenFingerprint, ok := req.Secret.InternalData["fingerprint"]
-	if !ok {
-		roleName, orgId, logicalName, err := getTokenFingerprintComponents(d)
-		if err == nil {
-			tokenFingerprint = calculateTokenFingerprintFromComponent(orgId, roleName, logicalName)
-		}
-	}
-	token, err := readToken(ctx, req.Storage, tokenFingerprint.(string))
-
-	// fallback to matching by client id if no fingerprint match found
-	if err != nil {
-		clientId, ok := d.GetOk("client_id")
-
-		if ok {
-			var tokenList []string
-			tokenList, err = listCreds(ctx, req.Storage)
-			if err != nil {
-				return nil, errors.New("unable to retrieve tokens from vault" + err.Error())
-			}
-			if len(tokenList) == 0 {
-				return nil, errors.New("no tokens found in vault")
-			}
-			for i := 0; i < len(tokenList); i++ {
-				token, err = readToken(ctx, req.Storage, tokenList[i])
-				if err != nil {
-					return nil, errors.New("unable to retrieve token from local store" + err.Error())
-				}
-				if token == nil {
-					continue
-				}
-				if  token.ClientID == clientId {
-					break
-				}
-			}
-		}
-	}
-	if token == nil {
-		return nil, errors.New("unable to find token")
-	}
-	return token, nil
-}
-
 func (b *datastaxAstraBackend) debugAndTestPathCredentialsUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	//b.lock.Lock()
 	//defer b.lock.Unlock()
 	b.logger.Debug("Update called")
-
-	roleName, ok := d.GetOk("role_name")
-	if !ok {
-		b.logger.Debug("role_name not provided")
-		return nil, errors.New("role_name not provided")
-	}
-	b.logger.Debug(fmt.Sprintf("role_name: %s", roleName.(string)))
-
-	orgId, ok := d.GetOk("org_id")
-	if !ok {
-		b.logger.Debug("org_id not provided")
-		return nil, errors.New("org_id not provided")
-	}
-	b.logger.Debug(fmt.Sprintf("org_id: %s", orgId.(string)))
-
-	logicalName, ok := d.GetOk("logical_name")
-	if !ok {
-		b.logger.Debug("logical_name not provided")
-		return nil, errors.New("logical_name not provided")
-	}
-	b.logger.Debug(fmt.Sprintf("logical_name: %s", logicalName.(string)))
-
-	tok, err := readToken(ctx, req.Storage, logicalName.(string))
+	roleName, orgId, logicalName, err := getTokenIdentifiers(d)
 	if err != nil {
-		b.logger.Debug(fmt.Sprintf("unable to retrieve info for logical_name: %s. %s", logicalName.(string), err.Error()))
-		return nil, errors.New(err.Error())
+		return nil, errors.New("unable to retrieve token identifier information: " + err.Error())
 	}
-	if tok != nil {
-		b.logger.Debug(fmt.Sprintf("token already exists for role: %s", logicalName.(string)))
-		tokJsonData, err := json.Marshal(tok.toResponseData())
+	b.logger.Debug(fmt.Sprintf("role_name: %s", roleName))
+	b.logger.Debug(fmt.Sprintf("org_id: %s", orgId))
+	b.logger.Debug(fmt.Sprintf("logical_name: %s", logicalName))
+
+	clientId, ok := d.GetOk("client_id")
+	if ok {
+		tok, err := readToken(ctx, req.Storage, clientId.(string))
 		if err != nil {
-			b.logger.Debug(fmt.Sprintf("could not marshal json: %s", err.Error()))
+			b.logger.Debug(fmt.Sprintf("unable to retrieve info for clientId: %s. %s", clientId.(string), err.Error()))
 			return nil, errors.New(err.Error())
 		}
-		b.logger.Debug(fmt.Sprintf("json data: %s", tokJsonData))
-		return nil, errors.New("token already exists for role")
+		if tok != nil {
+			b.logger.Debug(fmt.Sprintf("token already exists for role: %s", clientId.(string)))
+			tokJsonData, err := json.Marshal(tok.toResponseData())
+			if err != nil {
+				b.logger.Debug(fmt.Sprintf("could not marshal json: %s", err.Error()))
+				return nil, errors.New(err.Error())
+			}
+			b.logger.Debug(fmt.Sprintf("json data: %s", tokJsonData))
+
+			internalData := map[string]interface{}{
+				"token":    	tok.Token,
+				"metadata": 	tok.Metadata,
+				"orgId":    	tok.OrgID,
+			}
+			return b.Secret(astraTokenType).Response(tok.toResponseData(), internalData), nil
+		} else {
+			b.logger.Debug(fmt.Sprintf("no token found for clientId %s, so we will create a new one", clientId.(string)))
+		}
 	} else {
-		b.logger.Debug(fmt.Sprintf("no token found for role: %s", logicalName.(string)))
+		b.logger.Debug("client_id not provided, so we will create a new token")
 	}
 	tokenId := uuid.New().String()
 	newToken := astraToken {
-		RoleNickname: roleName.(string),
+		RoleNickname: roleName,
 		ClientID: tokenId,
-		LogicalName: logicalName.(string),
-		OrgID: orgId.(string),
+		LogicalName: logicalName,
+		OrgID: orgId,
+	}
+	internalData := map[string]interface{}{
+		"token":    	newToken.Token,
+		"metadata": 	newToken.Metadata,
+		"orgId":    	newToken.OrgID,
 	}
 
 	err = saveToken(ctx, &newToken, req.Storage)
@@ -243,14 +201,34 @@ func (b *datastaxAstraBackend) debugAndTestPathCredentialsUpdate(ctx context.Con
 		b.logger.Debug(fmt.Sprintf("token saved: %s", tokenId))
 	}
 
+	resp := b.Secret(astraTokenType).Response(newToken.toResponseData(), internalData)
+	leaseTime, ok := d.GetOk("lease_time")
+	if !ok {
+		return resp, nil
+	}
+	parseLeaseTime, _ := time.ParseDuration(leaseTime.(string))
+	maxLeaseTime, ok := d.GetOk("max_lease_time")
+	if !ok {
+		maxLeaseTime = defaultMaxLeaseTime
+	}
+	if maxLeaseTime == "" {
+		maxLeaseTime = defaultMaxLeaseTime
+	}
+	parseMaxLeaseTime, _ := time.ParseDuration(maxLeaseTime.(string))
+	if parseLeaseTime > parseMaxLeaseTime {
+		parseLeaseTime = parseMaxLeaseTime
+	}
+	resp.Secret.TTL = parseLeaseTime
+	resp.Secret.MaxTTL = parseMaxLeaseTime
+	resp.Secret.Renewable = true
+
 	time.Sleep(30 * time.Second)
-	return nil, nil
+	return resp, nil
 }
 
 // pathCredentialsRead reads a token from vault.
 func (b *datastaxAstraBackend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	token, err := matchToken(ctx, req, d)
-
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}
@@ -264,7 +242,7 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 	if token != nil {
 		return nil, errors.New("token already exists for role")
 	}
-	roleName, orgId, logicalName, err := getTokenFingerprintComponents(d)
+	roleName, orgId, logicalName, err := getTokenIdentifiers(d)
 	entry, err := readRole(ctx, req.Storage, roleName, orgId)
 	if err != nil {
 		return nil, err
@@ -319,7 +297,6 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 		"token":    	newToken.Token,
 		"metadata": 	newToken.Metadata,
 		"orgId":    	newToken.OrgID,
-		"fingerprint":	calculateTokenFingerprint(newToken),
 	}
 
 	err = saveToken(ctx, newToken, req.Storage)
