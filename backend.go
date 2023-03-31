@@ -2,9 +2,11 @@ package datastax_astra
 
 import (
 	"context"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"strings"
 	"sync"
 
+	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -25,6 +27,7 @@ type datastaxAstraBackend struct {
 	*framework.Backend
 	lock   sync.RWMutex
 	client *astraClient
+	logger log.Logger
 }
 
 // backend defines the target API backend
@@ -33,6 +36,7 @@ type datastaxAstraBackend struct {
 func backend() *datastaxAstraBackend {
 	var b = datastaxAstraBackend{}
 
+	b.logger = logging.NewVaultLogger(log.Debug)
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 		PathsSpecial: &logical.Paths{
