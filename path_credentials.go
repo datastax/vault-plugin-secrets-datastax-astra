@@ -156,6 +156,7 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 	fingerprint := calculateTokenFingerprintFromComponent(orgId.(string), roleName.(string), logicalName.(string))
 	tok, err := readToken(ctx, req.Storage, fingerprint)
 	if tok != nil {
+		b.logger.Debug("token exists")
 		return nil, errors.New("token already exists for role")
 	}
 	entry, err := readRole(ctx, req.Storage, roleName.(string), orgId.(string))
@@ -229,6 +230,7 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 	parseLeaseTime, _ := time.ParseDuration(leaseTime.(string))
 	resp.Secret.TTL = parseLeaseTime
 	resp.Secret.Renewable = true
+	b.logger.Debug("token created")
 	return resp, nil
 }
 
@@ -365,6 +367,7 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 }
 
 func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.logger.Debug("renew called")
 	resp := &logical.Response{Secret: req.Secret}
 	uuid := req.Secret.InternalData["orgId"]
 	configData, err := getConfig(ctx, req.Storage, uuid.(string))
