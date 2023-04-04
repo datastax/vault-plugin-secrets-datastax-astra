@@ -86,6 +86,7 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 
 // pathCredentialsRead reads a token from vault.
 func (b *datastaxAstraBackend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.logger.Debug("read called")
 	roleName, ok := d.GetOk("role_name")
 	if !ok {
 		return nil, errors.New("role_name not provided")
@@ -306,7 +307,7 @@ func doTokensMatch(token *astraToken, tokentoRevoke string) bool {
 }
 
 func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
+	b.logger.Debug("revoke called")
 	tokenRaw, ok := req.Secret.InternalData["token"]
 	if !ok {
 		return nil, errors.New("token not retrived")
