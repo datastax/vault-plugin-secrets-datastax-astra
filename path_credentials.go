@@ -224,12 +224,8 @@ func (b *datastaxAstraBackend) pathCredentialsWrite(ctx context.Context, req *lo
 		return nil, err
 	}
 	resp := b.Secret(astraTokenType).Response(token.toResponseData(), internalData)
-	leaseTime, ok := d.GetOk("lease_time")
-	if !ok {
-		return resp, nil
-	}
-	parseLeaseTime, _ := time.ParseDuration(leaseTime.(string))
-	resp.Secret.TTL = parseLeaseTime
+	resp.Secret.TTL = entry.TTL
+	resp.Secret.MaxTTL = entry.MaxTTL
 	resp.Secret.Renewable = true
 	b.logger.Debug("token created")
 	return resp, nil
@@ -370,23 +366,16 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.logger.Debug("renew called")
 	resp := &logical.Response{Secret: req.Secret}
-	uuid := req.Secret.InternalData["orgId"]
-	configData, err := getConfig(ctx, req.Storage, uuid.(string))
+	orgId := req.Secret.InternalData["orgId"]
+	roleName := req.Secret.InternalData["roleName"]
+	entry, err := readRole(ctx, req.Storage, roleName.(string), orgId.(string))
 	if err != nil {
 		resp.Secret.TTL = 24 * time.Hour
 		return resp, errors.New("error getting config data. lease time set to 24h")
 	}
-	renewal_time := configData.DefaultLeaseRenewTime
-	if renewal_time == "" {
-		resp.Secret.TTL = 24 * time.Hour
-		return resp, nil
-	}
-	parsedRenewalTime, err := time.ParseDuration(renewal_time)
-	if err != nil {
-		resp.Secret.TTL = 24 * time.Hour
-		return resp, errors.New("error parsing default lease time. lease time set to 24h")
-	}
-	resp.Secret.TTL = parsedRenewalTime
+
+	resp.Secret.TTL = entry.TTL
+	resp.Secret.MaxTTL = entry.MaxTTL
 	return resp, nil
 }
 

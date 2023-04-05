@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"time"
 )
 
 const (
@@ -27,6 +28,14 @@ func pathRole(b *datastaxAstraBackend) *framework.Path {
 			"org_id": {
 				Type:        framework.TypeString,
 				Description: "UUID of the organization in Astra.",
+			},
+			"ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Default lease for generated token. If not set or set to 0, will use system default.",
+			},
+			"max_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Maximum time for role. If not set or set to 0, will use system default.",
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -105,10 +114,14 @@ func (b *datastaxAstraBackend) pathRoleWrite(ctx context.Context,
 	roleName := data.Get("role").(string)
 	orgId := data.Get("org_id").(string)
 	roleId := data.Get("role_id").(string)
+	ttlRaw := data.Get("ttl").(int)
+	maxTTLRaw := data.Get("max_ttl").(int)
 	role := &roleEntry{
 		RoleId: roleId,
 		OrgId:  orgId,
 		Name:   roleName,
+		TTL:    time.Duration(ttlRaw) * time.Second,
+		MaxTTL: time.Duration(maxTTLRaw) * time.Second,
 	}
 	err := saveRole(ctx, role, req.Storage, roleName, orgId)
 	if err != nil {
@@ -134,7 +147,7 @@ func (b *datastaxAstraBackend) pathRoleDelete(ctx context.Context, req *logical.
 	return nil, nil
 }
 
-//TODO fix below
+// TODO fix below
 const (
 	pathRoleHelpSynopsis    = `Manages the Vault role for generating Astra tokens.`
 	pathRoleHelpDescription = `
