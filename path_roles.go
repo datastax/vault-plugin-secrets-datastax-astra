@@ -11,6 +11,8 @@ import (
 const (
 	rolePath      = "role"
 	rolesListPath = "roles/?"
+	defaultTtl    = 604800
+	defaultMaxTtl = 2592000
 )
 
 func pathRole(b *datastaxAstraBackend) *framework.Path {
@@ -31,11 +33,11 @@ func pathRole(b *datastaxAstraBackend) *framework.Path {
 			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: "Default lease for generated token. If not set or set to 0, will use system default.",
+				Description: "Default lease for generated token. If not set or set to 0, will use default.",
 			},
 			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
-				Description: "Maximum time for role. If not set or set to 0, will use system default.",
+				Description: "Maximum time for role. If not set or set to 0, will use default.",
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -114,14 +116,22 @@ func (b *datastaxAstraBackend) pathRoleWrite(ctx context.Context,
 	roleName := data.Get("role").(string)
 	orgId := data.Get("org_id").(string)
 	roleId := data.Get("role_id").(string)
-	ttlRaw := data.Get("ttl").(int)
-	maxTTLRaw := data.Get("max_ttl").(int)
+	ttlRaw, ok := data.GetOk("ttl")
+	if !ok {
+		ttlRaw = defaultTtl
+	}
+	maxTtlRaw, ok := data.GetOk("max_ttl")
+	if !ok {
+		maxTtlRaw = defaultMaxTtl
+	}
+	ttlRawInt := ttlRaw.(int)
+	maxTtlRawInt := maxTtlRaw.(int)
 	role := &roleEntry{
 		RoleId: roleId,
 		OrgId:  orgId,
 		Name:   roleName,
-		TTL:    time.Duration(ttlRaw) * time.Second,
-		MaxTTL: time.Duration(maxTTLRaw) * time.Second,
+		TTL:    time.Duration(ttlRawInt) * time.Second,
+		MaxTTL: time.Duration(maxTtlRawInt) * time.Second,
 	}
 	err := saveRole(ctx, role, req.Storage, roleName, orgId)
 	if err != nil {
