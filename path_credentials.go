@@ -46,7 +46,7 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 }
 
 func (b *datastaxAstraBackend) createToken(ctx context.Context, s logical.Storage, roleEntry *astraRoleEntry) (*astraToken, error) {
-	b.logger.Debug("createToken called")
+	b.logger.Debug("pathCredentials.createToken called")
 	client, err := b.getClient(ctx, s, roleEntry.OrgId)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (b *datastaxAstraBackend) createToken(ctx context.Context, s logical.Storag
 }
 
 func (b *datastaxAstraBackend) readToken(ctx context.Context, req *logical.Request, roleEntry *astraRoleEntry) (*logical.Response, error) {
-	b.logger.Debug("readToken called")
+	b.logger.Debug("pathCredentials.readToken called")
 	token, err := b.createToken(ctx, req.Storage, roleEntry)
 	if err != nil {
 		return nil, err
@@ -85,12 +85,12 @@ func (b *datastaxAstraBackend) readToken(ctx context.Context, req *logical.Reque
 
 	if roleEntry.TTL > 0 {
 		resp.Secret.TTL = roleEntry.TTL
-		b.logger.Debug(fmt.Sprintf("readToken - set logical.Response.Secret.TTL to: %d", roleEntry.TTL))
+		b.logger.Debug(fmt.Sprintf("pathCredentials.readToken - set logical.Response.Secret.TTL to: %s", roleEntry.TTL))
 	}
 
 	if roleEntry.MaxTTL > 0 {
 		resp.Secret.MaxTTL = roleEntry.MaxTTL
-		b.logger.Debug(fmt.Sprintf("readToken - set logical.Response.Secret.MaxTTL to: %d", roleEntry.MaxTTL))
+		b.logger.Debug(fmt.Sprintf("pathCredentials.readToken - set logical.Response.Secret.MaxTTL to: %s", roleEntry.MaxTTL))
 	}
 
 	return resp, nil
@@ -98,7 +98,7 @@ func (b *datastaxAstraBackend) readToken(ctx context.Context, req *logical.Reque
 
 // pathCredentialsRead reads a token from vault.
 func (b *datastaxAstraBackend) pathCredentialsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.logger.Debug("pathCredentialsRead called")
+	b.logger.Debug("pathCredentials.pathCredentialsRead called")
 	roleName := d.Get("role_name").(string)
 	orgId := d.Get("org_id").(string)
 
@@ -113,7 +113,7 @@ func (b *datastaxAstraBackend) pathCredentialsRead(ctx context.Context, req *log
 		return nil, nil
 	}
 
-	b.logger.Debug(fmt.Sprintf("pathCredentialsRead - found role: %s (%s)", roleEntry.RoleName, roleEntry.RoleId))
+	b.logger.Debug(fmt.Sprintf("pathCredentials.pathCredentialsRead - found role: %s (%s)", roleEntry.RoleName, roleEntry.RoleId))
 
 	return b.readToken(ctx, req, roleEntry)
 }

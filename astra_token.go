@@ -92,7 +92,7 @@ func deleteToken(c *astraClient, clientId string) error {
 }
 
 func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.logger.Debug("tokenRenew called")
+	b.logger.Debug("astraToken.tokenRenew called")
 	orgIdRaw, ok := req.Secret.InternalData["orgId"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing orgId internal data")
@@ -134,11 +134,11 @@ func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Requ
 	}
 	if newTTL > 0 {
 		resp.Secret.TTL = newTTL
-		b.logger.Debug(fmt.Sprintf("tokenRenew - set logical.Response.Secret.TTL to: %s", newTTL))
+		b.logger.Debug(fmt.Sprintf("astraToken.tokenRenew - set logical.Response.Secret.TTL to: %s", newTTL))
 	}
 	if roleEntry.MaxTTL > 0 {
 		resp.Secret.MaxTTL = roleEntry.MaxTTL
-		b.logger.Debug(fmt.Sprintf("tokenRenew - set logical.Response.Secret.MaxTTL to: %s", roleEntry.MaxTTL))
+		b.logger.Debug(fmt.Sprintf("astraToken.tokenRenew - set logical.Response.Secret.MaxTTL to: %s", roleEntry.MaxTTL))
 	}
 
 	return resp, nil
@@ -146,7 +146,7 @@ func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Requ
 
 
 func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.logger.Debug("tokenRevoke called")
+	b.logger.Debug("astraToken.tokenRevoke called")
 	orgId, ok := req.Secret.InternalData["orgId"]
 	if !ok {
 		return nil, errors.New("failed to retrieve organisation Id related to token")
@@ -165,7 +165,7 @@ func (b *datastaxAstraBackend) tokenRevoke(ctx context.Context, req *logical.Req
 		}
 	}
 
-	b.logger.Debug(fmt.Sprintf("tokenRevoke - deleting token: %s", clientId))
+	b.logger.Debug(fmt.Sprintf("astraToken.tokenRevoke - deleting token: %s", clientId))
 	if err := deleteToken(client, clientId); err != nil {
 		return nil, fmt.Errorf("error revoking user token: %w", err)
 	}

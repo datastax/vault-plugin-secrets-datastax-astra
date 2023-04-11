@@ -103,7 +103,7 @@ func saveRole(ctx context.Context, s logical.Storage, roleName, orgId string, ro
 // pathRolesRead makes a request to Vault storage to read a role and return response data
 func (b *datastaxAstraBackend) pathRoleRead(ctx context.Context,
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.logger.Debug("pathRoleRead called")
+	b.logger.Debug("pathRole.pathRoleRead called")
 	role, err := readRole(ctx, req.Storage, d.Get("role_name").(string), d.Get("org_id").(string))
 	if err != nil {
 		return nil, err
@@ -120,7 +120,7 @@ func (b *datastaxAstraBackend) pathRoleRead(ctx context.Context,
 // pathRolesWrite makes a request to Vault storage to update a role based on the attributes passed to the role configuration
 func (b *datastaxAstraBackend) pathRoleWrite(ctx context.Context,
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.logger.Debug("pathRoleWrite called")
+	b.logger.Debug("pathRole.pathRoleWrite called")
 	roleName, ok := d.GetOk("role_name")
 	if !ok {
 		return logical.ErrorResponse("missing role name"), nil
@@ -155,7 +155,7 @@ func (b *datastaxAstraBackend) pathRoleWrite(ctx context.Context,
 	}
 	parseTtl, _ := time.ParseDuration(ttl.(string))
 	role.TTL = time.Duration(parseTtl.Seconds()) * time.Second
-	b.logger.Debug(fmt.Sprintf("pathRoleWrite - setting TTL to: %s", role.TTL))
+	b.logger.Debug(fmt.Sprintf("pathRole.pathRoleWrite - setting TTL to: %s", role.TTL))
 
 	maxTtl, ok := d.GetOk("max_ttl")
 	if !ok && createOperation {
@@ -163,7 +163,7 @@ func (b *datastaxAstraBackend) pathRoleWrite(ctx context.Context,
 	}
 	parseMaxTtl, _ := time.ParseDuration(maxTtl.(string))
 	role.MaxTTL = time.Duration(parseMaxTtl.Seconds()) * time.Second
-	b.logger.Debug(fmt.Sprintf("pathRoleWrite - setting MaxTTL to: %s", role.MaxTTL))
+	b.logger.Debug(fmt.Sprintf("pathRole.pathRoleWrite - setting MaxTTL to: %s", role.MaxTTL))
 
 	if role.MaxTTL == 0 {
 		role.MaxTTL = defaultMaxTtl
@@ -183,7 +183,7 @@ func (b *datastaxAstraBackend) pathRoleWrite(ctx context.Context,
 
 // pathRolesDelete makes a request to Vault storage to delete a role
 func (b *datastaxAstraBackend) pathRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.logger.Debug("pathRoleDelete called")
+	b.logger.Debug("pathRole.pathRoleDelete called")
 	roleName, ok := d.GetOk("role_name")
 	if !ok {
 		return nil, errors.New("role name not provided")
