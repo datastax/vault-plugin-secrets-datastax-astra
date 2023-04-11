@@ -7,6 +7,13 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const (
+	pathRoleListHelpSynopsis    = `List the existing roles in the given Astra organisation`
+	pathRoleListHelpDescription = `Roles will be listed by their name.`
+	rolesListPath = "roles/?$"
+
+)
+
 func pathRoleList(b *datastaxAstraBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: rolesListPath,
@@ -16,6 +23,8 @@ func pathRoleList(b *datastaxAstraBackend) *framework.Path {
 				Summary:  "List all roles.",
 			},
 		},
+		HelpSynopsis:    pathRoleListHelpSynopsis,
+		HelpDescription: pathRoleListHelpDescription,
 	}
 }
 

@@ -56,7 +56,6 @@ func backend() *datastaxAstraBackend {
 				pathRole(&b),
 				pathRoleList(&b),
 				pathConfigList(&b),
-				pathCredentialsList(&b),
 			},
 		),
 		Secrets: []*framework.Secret{
@@ -82,6 +81,36 @@ func (b *datastaxAstraBackend) invalidate(ctx context.Context, key string) {
 	if key == "config" {
 		b.reset()
 	}
+}
+
+func (b *datastaxAstraBackend) getClient(ctx context.Context, s logical.Storage, orgId string) (*astraClient, error) {
+	b.lock.RLock()
+	unlockFunc := b.lock.RUnlock
+	defer func() { unlockFunc() }()
+
+	if b.client != nil {
+		return b.client, nil
+	}
+
+	b.lock.RUnlock()
+	b.lock.Lock()
+	unlockFunc = b.lock.Unlock
+
+	config, err := getConfig(ctx, s, orgId)
+	if err != nil {
+		return nil, err
+	}
+
+	if config == nil {
+		config = new(astraConfig)
+	}
+
+	b.client, err = newClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.client, nil
 }
 
 // backendHelp should contain help information for the backend
