@@ -122,17 +122,17 @@ func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Requ
 
 	resp := &logical.Response{Secret: req.Secret}
 
-	var newTTL time.Duration
-	if configData.DefaultLeaseRenewTime > 0 {
-		if configData.DefaultLeaseRenewTime > roleEntry.MaxTTL {
-			newTTL = roleEntry.MaxTTL
-		} else {
-			newTTL = configData.DefaultLeaseRenewTime
-		}
-	} else {
-		newTTL = roleEntry.TTL
-	}
+	var newTTL time.Duration = 0
 	if roleEntry.TTL > 0 {
+		newTTL = roleEntry.TTL
+	} else if configData.DefaultLeaseRenewTime > 0 {
+		newTTL = configData.DefaultLeaseRenewTime
+	}
+
+	if newTTL > roleEntry.MaxTTL {
+		newTTL = roleEntry.MaxTTL
+	}
+	if newTTL > 0 {
 		resp.Secret.TTL = newTTL
 		b.logger.Debug(fmt.Sprintf("tokenRenew - set logical.Response.Secret.TTL to: %s", newTTL))
 	}
