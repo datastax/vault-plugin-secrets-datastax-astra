@@ -65,11 +65,6 @@ func pathCredentials(b *datastaxAstraBackend) *framework.Path {
 					Sensitive: false,
 				},
 			},
-			"lease_time": {
-				Type:        framework.TypeString,
-				Description: "leaseTime in seconds, minutes or hours for the token. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
-				Required:    false,
-			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
