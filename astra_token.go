@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -122,19 +121,9 @@ func (b *datastaxAstraBackend) tokenRenew(ctx context.Context, req *logical.Requ
 
 	resp := &logical.Response{Secret: req.Secret}
 
-	var newTTL time.Duration = 0
 	if roleEntry.TTL > 0 {
-		newTTL = roleEntry.TTL
-	} else if configData.DefaultLeaseRenewTime > 0 {
-		newTTL = configData.DefaultLeaseRenewTime
-	}
-
-	if newTTL > roleEntry.MaxTTL {
-		newTTL = roleEntry.MaxTTL
-	}
-	if newTTL > 0 {
-		resp.Secret.TTL = newTTL
-		b.logger.Debug(fmt.Sprintf("astraToken.tokenRenew - set logical.Response.Secret.TTL to: %s", newTTL))
+		resp.Secret.TTL = roleEntry.TTL
+		b.logger.Debug(fmt.Sprintf("astraToken.tokenRenew - set logical.Response.Secret.TTL to: %s", roleEntry.TTL))
 	}
 	if roleEntry.MaxTTL > 0 {
 		resp.Secret.MaxTTL = roleEntry.MaxTTL

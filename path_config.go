@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	"time"
 )
 
 const (
@@ -21,7 +20,6 @@ type astraConfig struct {
 	URL                   	string 			`json:"url"`
 	OrgId                 	string 			`json:"org_id"`
 	LogicalName           	string 			`json:"logical_name"`
-	DefaultLeaseRenewTime	time.Duration	`json:"renewal_time"`
 }
 
 func pathConfig(b *datastaxAstraBackend) *framework.Path {
@@ -61,15 +59,6 @@ func pathConfig(b *datastaxAstraBackend) *framework.Path {
 				Required:    false,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:      "logical_name",
-					Sensitive: false,
-				},
-			},
-			"renewal_time": {
-				Type:        framework.TypeString,
-				Description: "Default lease time in seconds, minutes or hours for renew operation. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
-				Required:    false,
-				DisplayAttrs: &framework.DisplayAttributes{
-					Name:      "renewal_time",
 					Sensitive: false,
 				},
 			},
@@ -154,7 +143,6 @@ func (b *datastaxAstraBackend) pathConfigRead(ctx context.Context, req *logical.
 						"url":          m.URL,
 						"org_id":       m.OrgId,
 						"logical_name": m.LogicalName,
-						"renewal_time": m.DefaultLeaseRenewTime,
 					},
 				}, nil
 			}
@@ -174,7 +162,6 @@ func (b *datastaxAstraBackend) pathConfigRead(ctx context.Context, req *logical.
 				"url":          config.URL,
 				"org_id":       config.OrgId,
 				"logical_name": config.LogicalName,
-				"renewal_time": config.DefaultLeaseRenewTime,
 			},
 		}, nil
 	}
@@ -220,15 +207,6 @@ func (b *datastaxAstraBackend) pathConfigWrite(ctx context.Context, req *logical
 	} else if !ok && createOperation {
 		return nil, errors.New("logical_name not present")
 	}
-	renewalTime, ok := data.GetOk("renewal_time")
-	if !ok && createOperation {
-		renewalTime = data.Get("renewal_time")
-	}
-	if renewalTime == "" {
-		renewalTime = "0"
-	}
-	parseRenewalTime, _ := time.ParseDuration(renewalTime.(string))
-	config.DefaultLeaseRenewTime = time.Duration(parseRenewalTime.Seconds()) * time.Second
 
 	err = saveConfig(ctx, config, req.Storage)
 	if err != nil {
