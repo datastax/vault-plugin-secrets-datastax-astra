@@ -144,7 +144,10 @@ If you elect to build the plugin from Go modules in our GitHub repo, follow thes
 6. Register the `vault-plugin-secrets-datastax-astra` plugin in the Vault system catalog and use the version of the plugin you just downloaded:
 
 	```bash
-	vault plugin register -sha256=${SHA256} -command=vault-plugin-secrets-datastax-astra_1.0.0 -version=v1.0.0 secret vault-plugin-secrets-datastax-astra
+	vault plugin register -sha256=${SHA256} \
+	  -command=vault-plugin-secrets-datastax-astra_1.0.0 \
+	  -version=v1.0.0 \
+	  secret vault-plugin-secrets-datastax-astra
 	```
 
 	**Output:**
@@ -388,10 +391,13 @@ Follow these steps:
 ## Upgrade plugin from binary distribution
 Plugin versioning was introduced in Vault 1.12, allowing for a smooth upgrade of the plugin that has been mounted at a path on a running Vault server. These steps assume you have already registered the plugins as outlined under "Setup plugin from binary distribution".
 
-1. To upgrade the plugin, register a newer version of the plugin. You **must** use the same plugin type and name as the plugin being upgraded:
+1. To upgrade the plugin, register a newer version of the plugin. You **must** use the same plugin type (secret) and name (vault-plugin-secrets-datastax-astra) as the plugin being upgraded:
 
 	```bash
-	vault plugin register -sha256=${SHA256} -command=vault-plugin-secrets-datastax-astra_1.0.1 -version=v1.0.1 secret vault-plugin-secrets-datastax-astra
+	vault plugin register -sha256=${SHA256} \
+	  -command=vault-plugin-secrets-datastax-astra_1.0.1 \
+	  -version=v1.0.1 \
+	  secret vault-plugin-secrets-datastax-astra
 	```
 
 2. Tune the existing mount to configure it to use the newly registered version:
