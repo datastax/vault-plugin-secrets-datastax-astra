@@ -184,14 +184,16 @@ If you elect to build the plugin from Go modules in our GitHub repo, follow thes
 5. Get the SHA-256 checksum of the plugin binary:
 
 	```bash
-	SHA256=$(sha256sum /private/etc/vault/plugins/vault-plugin-secrets-datastax-astra| cut -d' ' -f1)
+	SHA256=$(sha256sum /private/etc/vault/plugins/vault-plugin-secrets-datastax-astra_1.0.1 | cut -d' ' -f1)
 	```
 
-6. Register the `vault-plugin-secrets-datastax-astra` plugin in the Vault system catalog:
+6. Register the `vault-plugin-secrets-datastax-astra` plugin in the Vault system catalog, and use the version of the plugin you just downloaded:
 
 	```bash
-	vault write sys/plugins/catalog/secret/vault-plugin-secrets-datastax-astra \
-	sha_256="${SHA256}" command="vault-plugin-secrets-datastax-astra"
+	vault plugin register -sha256=${SHA256} \
+	  -command=vault-plugin-secrets-datastax-astra_1.0.1 \
+	  -version=v1.0.1 \
+	  secret vault-plugin-secrets-datastax-astra
 	```
 
 	**Output:**
@@ -637,6 +639,38 @@ Format:
 	```
 
     *NOTE*: The token can be renewed to a value no greater than `max_ttl`.
+
+
+## Upgrade plugin from binary distribution
+
+Plugin versioning was introduced in Vault 1.12, allowing for a smooth upgrade of the plugin that has been mounted at a path on a running Vault server. These steps assume you have already registered the plugins as outlined under "Setup plugin from binary distribution".
+
+1. To upgrade the plugin, register a newer version of the plugin. You **must** use the same plugin type (secret) and name (vault-plugin-secrets-datastax-astra) as the plugin being upgraded:
+
+	```bash
+	vault plugin register -sha256=${SHA256} \
+	  -command=vault-plugin-secrets-datastax-astra_1.0.1 \
+	  -version=v1.0.1 \
+	  secret vault-plugin-secrets-datastax-astra
+	```
+
+2. Tune the existing mount to configure it to use the newly registered version:
+
+	```bash
+	vault secrets tune -plugin-version=v1.0.1 vault-plugin-secrets-datastax-astra
+	```
+
+3. If you want, you can check the updated configuration. Notice the "Version" is now different from the "Running Version":
+
+	```bash
+	vault secrets list -detailed
+	```
+
+4. As the final step, trigger a plugin reload. This will reload all mounted backends using that plugin:
+
+	```bash
+	vault plugin reload -plugin vault-plugin-secrets-datastax-astra
+	```
 
 ## Summary
 
