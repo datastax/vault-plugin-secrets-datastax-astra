@@ -111,7 +111,7 @@ For more, see [user roles and permissions](https://docs.datastax.com/en/astra/do
 
 Astra DB Plugin for HashiCorp Vault is free. See the HashiCorp Platform Vault site for its [enterprise pricing](https://cloud.hashicorp.com/products/vault/pricing) details. 
 
-<a name="build-steps-optional"></a>
+<a name="build-steps"></a>
 ## Build steps - optional
 
 If you elect to build the plugin from Go modules in our GitHub repo, follow these steps. Otherwise, you can use the provided binary.
@@ -473,7 +473,7 @@ In this example, assume a company has three Astra DB organizations:
 <a name="using-sidecar"></a>
 ## Sidecar caller mode - using Astra DB tokens with HashiCorp Vault
 
-This section assumes you're using the plugin binary or you have optionally built the plugin from source (optional), using the steps described earlier in this topic [here](#build-steps-optional").
+This section assumes you're using the plugin binary or you have optionally built the plugin from source (optional), using the steps described earlier in [this topic](#build-steps).
 
 *REMINDER*: As previously noted:
 
