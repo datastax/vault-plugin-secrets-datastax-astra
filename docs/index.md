@@ -109,7 +109,7 @@ For more, see [user roles and permissions](https://docs.datastax.com/en/astra/do
 
 ## Pricing
 
-Astra DB Plugin for HashiCorp Vault is free. See the HashiCorp Platform Vault site for its [enterprise pricing](https://cloud.hashicorp.com/products/vault/pricing) details. 
+Astra DB Plugin for HashiCorp Vault is free. See the HashiCorp Platform Vault site for its [enterprise pricing](https://cloud.hashicorp.com/products/vault/pricing?target="_blank" ) details. 
 
 <a name="build-steps"></a>
 ## Build steps - optional
