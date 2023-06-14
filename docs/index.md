@@ -683,7 +683,7 @@ Plugin versioning was introduced in Vault 1.12, allowing for a smooth upgrade of
 
 ## Summary
 
-HashiCorp Vault has a full understanding of the historical token specifics, for control and auditing purposes, including when the tokens were used and by whom, along with a free-form role name and any custom metadata you may have associated with the tokens. For example, HashiCorp Vault's data knows the details of the token delete operation via its identity management and access control data; whereas Astra DB is only aware that a token of a particular `clientId` was generated on a date, and has since been deleted.
+HashiCorp Vault has a full understanding of the historical token specifics, for control and auditing purposes, including when the tokens were used and by whom, along with a free-form role name and any custom metadata you may have associated with the tokens. For example, HashiCorp Vault's data knows the details of the token delete operation through its identity management and access control data; whereas Astra DB is only aware that a token of a particular `clientId` was generated on a date, and has since been deleted.
 
 ## Community contributions
 
