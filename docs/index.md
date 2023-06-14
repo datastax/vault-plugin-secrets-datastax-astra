@@ -564,7 +564,7 @@ Format:
     Success! Data written to: astra/role
     ```
 
-    *NOTE*: After the role is created, you can change the defined `ttl` and `max_ttl` values by calling the same API with the same `role_name` and `org_id` arguments, and new `ttl` and/or `max_ttl` value(s).
+    *NOTE*: After creating the role, you can change the defined `ttl` and `max_ttl` values by calling the same API with the same `role_name` and `org_id` arguments, and new `ttl` and/or `max_ttl` value(s).
 	
 6. To read a role:
 
