@@ -487,7 +487,7 @@ This section assumes you're using the plugin binary or you have optionally built
 *REMINDER*: As previously noted:
 
 * In `standard` mode, the `vault write` command generates new tokens. The `sidecar` mode does not support the `vault write` command.
-* In `standard` mode, the `vault read` command is used to read a token; that is, get an existing token's information from vault. The `sidecar` mode uses the `vault read` command to generate new tokens. 
+* In `standard` mode, the `vault read` command gets an existing token's information from vault (also known as reading a token). The `sidecar` mode uses the `vault read` command to generate new tokens. 
 * The `sidecar` mode does not support fetching the existing token's information. 
 
 Given those differences, in this section we'll walk through the relevant steps and commands for users operating in `sidecar` mode. See the [previous section](#using-standard) for the commands in standard mode.
