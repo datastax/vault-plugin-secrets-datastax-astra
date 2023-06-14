@@ -669,7 +669,7 @@ Plugin versioning was introduced in Vault 1.12, allowing for a smooth upgrade of
 	vault secrets tune -plugin-version=v1.0.1 vault-plugin-secrets-datastax-astra
 	```
 
-3. If you want, you can check the updated configuration. Notice the "Version" is now different from the "Running Version":
+3. You can check the updated configuration. Notice the "Version" is now different from the "Running Version":
 
 	```bash
 	vault secrets list -detailed
