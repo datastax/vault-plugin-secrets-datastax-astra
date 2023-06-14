@@ -277,7 +277,7 @@ In this example, assume a company has three Astra DB organizations:
 	Success! Data written to astra/configs
 	```
 
-	The created root token will be used by HashiCorp Vault for further token operations within this organization. 
+	HashiCorp Vault then uses the created root token for further token operations within this organization. 
 
 2. List the created organization/token configurations:
 
