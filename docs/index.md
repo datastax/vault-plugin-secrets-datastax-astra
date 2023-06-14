@@ -159,7 +159,12 @@ If you elect to build the plugin from Go modules in our GitHub repo, follow thes
 
 ## Setup plugin from binary distribution
 
-1. Create a plugins directory where HashiCorp Vault will find the plugin. Example: `./vault/plugins`.  **IMPORTANT:** do not specify a symlinked directory.
+1. Create a plugin's directory where HashiCorp Vault finds the plugin. Example: `./vault/plugins`.  
++
+**IMPORTANT** 
+====
+Do not specify a symlinked directory.
+====
 
 2. Download the latest release Astra DB Plugin for HashiCorp Vault package for your operating system. In GitHub, navigate to the following directory, and click the relevant tarball to download it. Example: 
 
