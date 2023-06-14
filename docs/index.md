@@ -675,7 +675,7 @@ Plugin versioning was introduced in Vault 1.12, allowing for a smooth upgrade of
 	vault secrets list -detailed
 	```
 
-4. As the final step, trigger a plugin reload. This will reload all mounted backends using that plugin:
+4. As the final step, trigger a plugin reload. This reloads all mounted backends using that plugin:
 
 	```bash
 	vault plugin reload -plugin vault-plugin-secrets-datastax-astra
