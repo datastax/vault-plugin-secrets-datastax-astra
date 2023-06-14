@@ -216,7 +216,7 @@ Do not specify a symlinked directory.
 	Success! Enabled the vault-plugin-secrets-datastax-astra secrets engine at: astra/
 	```
 
-At this point, HashiCorp Vault and Astra DB Plugin for HashiCorp Vault are set up. They're ready to use.
+At this point, HashiCorp Vault and Astra DB Plugin for HashiCorp Vault are set up and ready to use.
 
 
 <a name="using-standard"></a>
