@@ -43,7 +43,7 @@ Astra DB Plugin for HashiCorp Vault supports two caller modes, which determine t
 The major differences between the standard and sidecar caller modes:
 
 * In `standard` mode, the `vault write` command generates new tokens. The `sidecar` mode does not support the `vault write` command.
-* In `standard` mode, the `vault read` command is used to read a token; that is, get an existing token's information from vault. The `sidecar` mode uses the `vault read` command to generate new tokens. 
+* In `standard` mode, the `vault read` command gets an existing token's information from vault (also known as reading a token). The `sidecar` mode uses the `vault read` command to generate new tokens. 
 * The `sidecar` mode does not support fetching the existing token's information. 
 
 ## Benefits
