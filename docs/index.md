@@ -247,7 +247,7 @@ In this example, assume a company has three Astra DB organizations:
 *IMPORTANT*: As noted previously in this topic, here are the differences between `standard` and `sidecar` caller modes:
 
 * In `standard` mode, the `vault write` command generates new tokens. The `sidecar` mode does not support the `vault write` command.
-* In `standard` mode, the `vault read` command is used to read a token; that is, get an existing token's information from vault. The `sidecar` mode uses the `vault read` command to generate new tokens. 
+* In `standard` mode, the `vault read` command gets an existing token's information from vault (also known as reading a token). The `sidecar` mode uses the `vault read` command to generate new tokens. 
 * The `sidecar` mode does not support fetching the existing token's information. 
 
 *Follow these steps for `standard` mode.*  For the steps in `sidecar` mode, see [this section](#using-sidecar), which appears later in this topic.
