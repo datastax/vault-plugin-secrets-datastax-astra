@@ -114,7 +114,7 @@ Astra DB Plugin for HashiCorp Vault is free. See the HashiCorp Platform Vault si
 <a name="build-steps"></a>
 ## Build steps - optional
 
-If you elect to build the plugin from Go modules in our GitHub repo, follow these steps. Otherwise, you can use the provided binary.
+To *optionally* build the plugin from Go modules in our GitHub repo, follow these steps. Otherwise, you can use the provided binary.
 
 1. Build the plugin:
 
@@ -160,11 +160,8 @@ If you elect to build the plugin from Go modules in our GitHub repo, follow thes
 ## Setup plugin from binary distribution
 
 1. Create a plugin's directory where HashiCorp Vault finds the plugin. Example: `./vault/plugins`.  
-+
-**IMPORTANT** 
-====
-Do not specify a symlinked directory.
-====
+
+    *IMPORTANT*: Do not specify a symlinked directory.
 
 2. Download the latest release Astra DB Plugin for HashiCorp Vault package for your operating system. In GitHub, navigate to the following directory, and click the relevant tarball to download it. Example: 
 
@@ -202,6 +199,7 @@ Do not specify a symlinked directory.
 	```
 
 	**Output:**
+
 	```bash
 	Success! Data written to: sys/plugins/catalog/secret/vault-plugin-secrets-datastax-astra
 	```
@@ -211,6 +209,7 @@ Do not specify a symlinked directory.
 	```bash
 	vault secrets enable -path=astra vault-plugin-secrets-datastax-astra
 	```
+
 	**Output:**
 	```bash
 	Success! Enabled the vault-plugin-secrets-datastax-astra secrets engine at: astra/
@@ -272,6 +271,7 @@ In this example, assume a company has three Astra DB organizations:
 	astra_token="AstraCS:ONqZCOAAAAAAAAAAAAAAAAe:608ba9999999999999190219" \
 	url="https://api.astra.datastax.com" logical_name="retailOrg" caller_mode="standard"
 	```
+
 	**Output:**
 	```bash
 	Success! Data written to astra/configs
