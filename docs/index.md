@@ -375,6 +375,8 @@ In this example, assume a company has three Astra DB organizations:
     vault write astra/org/token org_id="<ORG ID>" role_name="<ROLE NAME>" logical_name="<LOGICAL NAME>"
     ```
 
+    *NOTE*: Each token must have a unique combination of `org_id`, `role_name`, and `logical_name`.
+
     *Output*:
 
     ```bash
@@ -580,6 +582,8 @@ Format:
     ```bash
     vault read astra/org/token org_id="<ORG ID>" role_name="<ROLE NAME>" logical_name="<LOGICAL NAME>"
     ```
+
+    *NOTE*: Each token must have a unique combination of `org_id`, `role_name`, and `logical_name`.
 
     *Output*:
 
