@@ -323,7 +323,7 @@ In this example, assume a company has three Astra DB organizations:
 	 --header 'Authorization: Bearer <application_token>'
 	```
 
-	Or you can run the [update_roles.sh](https://github.com/datastax/vault-plugin-secrets-datastax-astra/blob/main/update_roles.sh) script. It's provided in our GitHub repo. The script adds all the Astra DB roles (default and custom) and their IDs to HashiCorp Vault. The update_roles.sh script generates Vault roles from Astra DB roles with default `ttl` and `max_ttl` values (86400 seconds). Example:
+	You can also run the [update_roles.sh](https://github.com/datastax/vault-plugin-secrets-datastax-astra/blob/main/update_roles.sh) script, available in our GitHub repo. The script adds all the Astra DB roles (default and custom) and their IDs to HashiCorp Vault. The update_roles.sh script generates Vault roles from Astra DB roles with default `ttl` and `max_ttl` values (86400 seconds). Example:
 
 	```bash
 	sh vault/plugins/vault-plugin-secrets-datastax-astra/update_roles.sh
