@@ -341,7 +341,7 @@ In this example, assume a company has three Astra DB organizations:
 	vault read astra/role org_id="<ORG ID>" role="<ROLE NAME>"
 	```
 
-	Also available is the `vault delete astra/role org_id="<ORG ID>" role="<ROLE NAME>"` command.
+	The `vault delete astra/role org_id="<ORG ID>" role="<ROLE NAME>"` command is also available.
 
 6. To write a role, specify the `ttl` and `max_ttl`. The token for that role lives until the `ttl` expires for that role, and the token can be renewed until the `max_ttl` value is reached. If you do not specify the `ttl` or `max_ttl`, or their values are set to `0`, the default `ttl` and `max_ttl` values will be `86400` seconds. Example:
 
