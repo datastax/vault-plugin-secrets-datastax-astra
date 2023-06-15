@@ -11,7 +11,7 @@ import (
 
 const (
 	secretsPath   = "/v2/clientIdSecrets"
-	pluginversion = "Vault-Plugin v1.0.0"
+	pluginversion = "Vault-Plugin v2.0.0"
 )
 
 // astraClient creates an object storing
