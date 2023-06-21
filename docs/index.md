@@ -165,7 +165,7 @@ To *optionally* build the plugin from Go modules in our GitHub repo, follow thes
 
 2. Download the latest release Astra DB Plugin for HashiCorp Vault package for your operating system. In GitHub, navigate to the following directory, and click the relevant tarball to download it. Example: 
 
-  https://github.com/datastax/vault-plugin-secrets-datastax-astra/releases/tag/v1.0.1
+  https://github.com/datastax/vault-plugin-secrets-datastax-astra/releases/tag/v2.0.0
 
 3. Unpack the binary and move its files to your plugin directory. 
 
@@ -186,15 +186,15 @@ To *optionally* build the plugin from Go modules in our GitHub repo, follow thes
 5. Get the SHA-256 checksum of the plugin binary:
 
 	```bash
-	SHA256=$(sha256sum /private/etc/vault/plugins/vault-plugin-secrets-datastax-astra_1.0.1 | cut -d' ' -f1)
+	SHA256=$(sha256sum /private/etc/vault/plugins/vault-plugin-secrets-datastax-astra_2.0.0 | cut -d' ' -f1)
 	```
 
 6. Register the `vault-plugin-secrets-datastax-astra` plugin in the Vault system catalog, and use the version of the plugin you just downloaded:
 
 	```bash
 	vault plugin register -sha256=${SHA256} \
-	  -command=vault-plugin-secrets-datastax-astra_1.0.1 \
-	  -version=v1.0.1 \
+	  -command=vault-plugin-secrets-datastax-astra_2.0.0 \
+	  -version=v2.0.0 \
 	  secret vault-plugin-secrets-datastax-astra
 	```
 
@@ -287,9 +287,9 @@ In this example, assume a company has three Astra DB organizations:
 
 	**Sample output:**
 	```bash
-	config/ccd999999_facd_4ad3_bbb99903d999999999999999d
-	config/Some0therOrgId_aaa999999_bbbb_4ad3_ccc99903dd
-	config/Y3tAnotherOrgId_aaa777777_bbbb_4ad3_ccc77777d
+	ccd999999_facd_4ad3_bbb99903d999999999999999d
+	Some0therOrgId_aaa999999_bbbb_4ad3_ccc99903dd
+	Y3tAnotherOrgId_aaa777777_bbbb_4ad3_ccc77777d
 	```
 
 3. Referring to the listed IDs, you can then submit read operation to get the defined properties. Example searching by `org_id`:
@@ -338,10 +338,10 @@ In this example, assume a company has three Astra DB organizations:
 	You can also return the metadata for a specific role. Example:
 
 	```bash
-	vault read astra/role org_id="<ORG ID>" role="<ROLE NAME>"
+	vault read astra/role org_id="<ORG ID>" role_name="<ROLE NAME>"
 	```
 
-	The `vault delete astra/role org_id="<ORG ID>" role="<ROLE NAME>"` command is also available.
+	The `vault delete astra/role org_id="<ORG ID>" role_name="<ROLE NAME>"` command is also available.
 
 6. To write a role, specify the `ttl` and `max_ttl`. The token for that role lives until the `ttl` expires for that role, and the token can be renewed until the `max_ttl` value is reached. If you do not specify the `ttl` or `max_ttl`, or their values are set to `0`, the default `ttl` and `max_ttl` values will be `86400` seconds. Example:
 
@@ -658,15 +658,15 @@ Plugin versioning was introduced in Vault 1.12, allowing for a smooth upgrade of
 
 	```bash
 	vault plugin register -sha256=${SHA256} \
-	  -command=vault-plugin-secrets-datastax-astra_1.0.1 \
-	  -version=v1.0.1 \
+	  -command=vault-plugin-secrets-datastax-astra_2.0.0 \
+	  -version=v2.0.0 \
 	  secret vault-plugin-secrets-datastax-astra
 	```
 
 2. Tune the existing mount to configure it to use the newly registered version:
 
 	```bash
-	vault secrets tune -plugin-version=v1.0.1 vault-plugin-secrets-datastax-astra
+	vault secrets tune -plugin-version=v2.0.0 vault-plugin-secrets-datastax-astra
 	```
 
 3. You can check the updated configuration. Notice the "Version" is now different from the "Running Version":
