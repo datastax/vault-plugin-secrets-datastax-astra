@@ -5,7 +5,7 @@
 #######
 
 function get_org_ids() {
-    ORGS=( $(vault list astra/configs  |grep ^config | cut -d/ -f2) )
+    ORGS=( $(vault list astra/configs  | tail -n +3) )
 }
 
 #function to get a list of roles
@@ -14,7 +14,7 @@ function get_roles_ids() {
     --header "Authorization: Bearer $SECRET" |jq -c '.[] |.id,.name' | sed 'N;s/\n/,/'
 }
 
-#function to itterate through the roles and build an array of roles and names
+#function to iterate through the roles and build an array of roles and names
 function make_vault_roles() {
     IFS=$'\n'       # make newlines the only separator
     for this_org in `get_roles_ids`
@@ -24,7 +24,7 @@ function make_vault_roles() {
         #Make the name safe for use in a vault path via last sed
         NAME=`echo $this_org | cut -d, -f2 |sed 's/"//g' |sed -E 's/[^[:alnum:]]+/_/g'`
         echo "Creating Role '$NAME' with UUID '$ID'"
-        vault write astra/role role_id="$ID" org_id="$ORG" role="$NAME"
+        vault write astra/role role_id="$ID" org_id="$ORG" role_name="$NAME"
     done
 }
 
@@ -36,7 +36,7 @@ function make_vault_roles() {
 #Genereate a list of orgs
 get_org_ids
 
-#Itterate through each organization
+#Iterate through each organization
 for ORG in "${ORGS[@]}"
 do
     echo "Updating roles for org '$ORG'"

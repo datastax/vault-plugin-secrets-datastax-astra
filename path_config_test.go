@@ -2,6 +2,7 @@ package datastax_astra
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -9,13 +10,12 @@ import (
 )
 
 const (
-	astra_token  = "AstraCS:KYZjAKoNQaQNEmrgJznTNiqZ:99df3d5dc4c3c25eac761ddad9630fc885e3b243bedb8f3b9f8c9b3ad6846b0e"
-	url          = "https://api.astra.datastax.com"
-	org_id       = "03acd0a6-1451-4827-b206-81ad1099f1a1"
-	logical_name = "org1"
-	renewal_time = "5h"
+	astra_token  = "AstraCS:Th!s1safAk3T0K3n"
+	url          = "http://localhost:" + mockLocalServerPort
+	org_id       = "testOrgId"
+	logical_name = "testLogicalName"
+	caller_mode  = "sidecar"
 )
-
 
 // TestConfig mocks the creation, read, update, and delete
 // of the backend configuration for astra.
@@ -28,7 +28,7 @@ func TestConfig(t *testing.T) {
 			"url":          url,
 			"org_id":       org_id,
 			"logical_name": logical_name,
-			"renewal_time": renewal_time,
+			"caller_mode":  caller_mode,
 		})
 
 		assert.NoError(t, err)
@@ -106,6 +106,18 @@ func testConfigRead(t *testing.T, b logical.Backend, s logical.Storage, d map[st
 	if resp != nil && resp.IsError() {
 		return resp.Error()
 	}
+
+	require.NotNil(t, resp.Data["url"])
+	require.NotNil(t, resp.Data["org_id"])
+	require.NotNil(t, resp.Data["logical_name"])
+	require.NotNil(t, resp.Data["caller_mode"])
+	expectedResp := map[string]interface{}{
+		"url":    			url,
+		"org_id": 			org_id,
+		"logical_name": 	logical_name,
+		"caller_mode": 		caller_mode,
+	}
+	require.Equal(t, expectedResp, resp.Data)
 
 	return nil
 }

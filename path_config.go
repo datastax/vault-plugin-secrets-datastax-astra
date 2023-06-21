@@ -9,20 +9,8 @@ import (
 )
 
 const (
-	configStoragePath = "config"
-	forwardSlash      = "/"
-	configsListPath   = "configs/?"
+	configStoragePath = "config/"
 )
-
-// astraConfig includes the minimum configuration
-// required to instantiate a new astra client.
-type astraConfig struct {
-	AstraToken            string `json:"astra_token"`
-	URL                   string `json:"url"`
-	OrgId                 string `json:"org_id"`
-	LogicalName           string `json:"logical_name"`
-	DefaultLeaseRenewTime string `json:"renewal_time"`
-}
 
 func pathConfig(b *datastaxAstraBackend) *framework.Path {
 	return &framework.Path{
@@ -64,12 +52,12 @@ func pathConfig(b *datastaxAstraBackend) *framework.Path {
 					Sensitive: false,
 				},
 			},
-			"renewal_time": {
+			"caller_mode": {
 				Type:        framework.TypeString,
-				Description: "Default lease time in seconds, minutes or hours for renew operation. Use the duration intials after the number. for e.g. 5s, 5m, 5h",
+				Description: "what type of client will be calling the API. Valid values are 'standard' (default) and 'sidecar'",
 				Required:    false,
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name:      "renewal_time",
+					Name:      "caller_mode",
 					Sensitive: false,
 				},
 			},
@@ -88,44 +76,10 @@ func pathConfig(b *datastaxAstraBackend) *framework.Path {
 				Callback: b.pathConfigDelete,
 			},
 		},
+		ExistenceCheck:  b.pathConfigExistenceCheck,
 		HelpSynopsis:    pathConfigHelpSynopsis,
 		HelpDescription: pathConfigHelpDescription,
 	}
-}
-func pathConfigList(b *datastaxAstraBackend) *framework.Path {
-	return &framework.Path{
-		Pattern: configsListPath,
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ListOperation: &framework.PathOperation{
-				Callback: b.pathConfigList,
-				Summary:  "List all configs.",
-			},
-		},
-	}
-}
-func (b *datastaxAstraBackend) pathConfigList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	matches := map[string]interface{}{}
-	objList, err := req.Storage.List(ctx, "config/")
-	if err != nil {
-		return nil, errors.New("failed to load config list")
-	}
-	if len(objList) == 0 {
-		return nil, errors.New("no objects found")
-	}
-	for _, key := range objList {
-		fmt.Println(key)
-		cid := "config/" + key
-		m, err := getConfig(ctx, req.Storage, key)
-		if err != nil {
-			return nil, errors.New("failed to get config for org in list")
-		}
-		matches[cid] = m.AstraToken
-	}
-	var keys []string
-	for k := range matches {
-		keys = append(keys, k)
-	}
-	return logical.ListResponseWithInfo(keys, matches), nil
 }
 
 // pathConfigRead reads the configuration and outputs information.
@@ -135,97 +89,135 @@ func (b *datastaxAstraBackend) pathConfigRead(ctx context.Context, req *logical.
 	if logicalName != "" && orgId == "" {
 		configs, err := listConfig(ctx, req.Storage)
 		if err != nil {
-			return nil, errors.New("error getting configs")
+			return nil, errors.New("error retrieving configs: " + err.Error())
 		}
 		if len(configs) == 0 {
 			return nil, errors.New("no configs found")
 		}
 		for _, orgId := range configs {
-			m, err := getConfig(ctx, req.Storage, orgId)
+			m, err := readConfig(ctx, req.Storage, orgId)
 			if err != nil {
-				return nil, errors.New("failed to get config for org in list")
+				return nil, errors.New("error retrieving config for org ID " + orgId + ": " + err.Error())
+			}
+			if m == nil {
+				return nil, errors.New("unable to find config for org ID " + orgId)
 			}
 			if m.LogicalName == logicalName {
 				return &logical.Response{
-					Data: map[string]interface{}{
-						"astra_token":  m.AstraToken,
-						"url":          m.URL,
-						"org_id":       m.OrgId,
-						"logical_name": m.LogicalName,
-						"renewal_time": m.DefaultLeaseRenewTime,
-					},
+					Data: m.ToResponseData(),
 				}, nil
 			}
 		}
-		return nil, errors.New("no config found for logical_name = " + logicalName)
+		return nil, errors.New("unable to find config for logical name " + logicalName)
 	}
 	if orgId != "" {
-		config, err := getConfig(ctx, req.Storage, orgId)
+		config, err := readConfig(ctx, req.Storage, orgId)
 		if err != nil {
 			return nil, err
 		}
 		if config == nil {
-			return nil, errors.New("config does not exist for org")
+			return nil, errors.New("unable to find config for org ID " + orgId)
 		}
 		return &logical.Response{
-			Data: map[string]interface{}{
-				"astra_token":  config.AstraToken,
-				"url":          config.URL,
-				"org_id":       config.OrgId,
-				"logical_name": config.LogicalName,
-				"renewal_time": config.DefaultLeaseRenewTime,
-			},
+			Data: config.ToResponseData(),
 		}, nil
 	}
-	return nil, errors.New("please provide org_id or logical_name")
+	return logical.ErrorResponse("please provide an org_id or a logical_name argument"), nil
 }
 
 // pathConfigWrite updates the configuration for the backend
 func (b *datastaxAstraBackend) pathConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	token, ok := data.GetOk("astra_token")
+	orgIdRaw, ok := data.GetOk("org_id")
 	if !ok {
-		return nil, errors.New("astra_token not present")
+		return logical.ErrorResponse("please provide an org_id argument"), nil
+	}
+	orgId := orgIdRaw.(string)
+
+	config, err := readConfig(ctx, req.Storage, orgId)
+	if err != nil {
+		return nil, err
+	}
+
+	createOperation := req.Operation == logical.CreateOperation
+
+	if config == nil {
+		if !createOperation {
+			return nil, errors.New("unable to find config for org ID " + orgId + " during update operation")
+		}
+		config = &astraConfig{}
+		config.OrgId = orgId
+	}
+
+	token, ok := data.GetOk("astra_token")
+	if ok {
+		config.AstraToken = token.(string)
+	} else if !ok && createOperation {
+		return logical.ErrorResponse("please provide an astra_token argument"), nil
 	}
 	url, ok := data.GetOk("url")
-	if !ok {
-		return nil, errors.New("url not present")
-	}
-	orgId, ok := data.GetOk("org_id")
-	if !ok {
-		return nil, errors.New("org_id not present")
+	if ok {
+		config.URL = url.(string)
+	} else if !ok && createOperation {
+		return logical.ErrorResponse("please provide a url argument"), nil
 	}
 	logicalName, ok := data.GetOk("logical_name")
-	if !ok {
-		return nil, errors.New("logical_name not present")
+	if ok {
+		config.LogicalName = logicalName.(string)
 	}
-	c, err := getConfig(ctx, req.Storage, orgId.(string))
+	callerModeRaw, ok := data.GetOk("caller_mode")
+	if ok {
+		callerMode := getCallerModeFromString(callerModeRaw.(string))
+		if callerMode == UndefinedCallerMode {
+			return logical.ErrorResponse("unrecognised caller_mode argument; valid values are 'standard' or 'sidecar'"), nil
+		}
+		config.CallerMode = callerMode
+	} else if !ok && createOperation {
+		config.CallerMode = StandardCallerMode
+	}
+
+	err = saveConfig(ctx, config, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if c != nil {
-		return nil, errors.New("config already exists")
-	}
-	renewalTime := data.Get("renewal_time")
-	config := astraConfig{
-		AstraToken:            token.(string),
-		URL:                   url.(string),
-		OrgId:                 orgId.(string),
-		LogicalName:           logicalName.(string),
-		DefaultLeaseRenewTime: renewalTime.(string),
-	}
-	err = saveConfig(ctx, &config, req.Storage)
-	if err != nil {
-		return nil, err
-	}
+
+	b.logger.Info(fmt.Sprintf(
+		"%s config for org ID %s running in %s caller mode",
+		operationToStringVerb(req.Operation),
+		config.OrgId,
+		config.CallerMode.String()))
 	// reset the client so the next invocation will pick up the new configuration
 	b.reset()
 	return nil, nil
 }
 
+func readConfig(ctx context.Context, s logical.Storage, orgId string) (*astraConfig, error) {
+	if orgId == "" {
+		return nil, errors.New("org ID is an empty string")
+	}
+
+	entry, err := s.Get(ctx, configStoragePath+orgId)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+	config := &astraConfig{}
+	err = entry.DecodeJSON(config)
+	if err != nil {
+		return nil, errors.New("error retrieving config for org ID " + orgId + ": " + err.Error())
+	}
+
+	return config, nil
+}
+
 func saveConfig(ctx context.Context, config *astraConfig, s logical.Storage) error {
-	entry, err := logical.StorageEntryJSON(configStoragePath+forwardSlash+config.OrgId, config)
+	entry, err := logical.StorageEntryJSON(configStoragePath+config.OrgId, config)
 	if err != nil {
 		return err
+	}
+	if entry == nil {
+		return errors.New("error creating config entry for org ID " + config.OrgId + ": " + err.Error())
 	}
 	if err = s.Put(ctx, entry); err != nil {
 		return err
@@ -235,44 +227,39 @@ func saveConfig(ctx context.Context, config *astraConfig, s logical.Storage) err
 
 // pathConfigDelete removes the configuration for the backend
 func (b *datastaxAstraBackend) pathConfigDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	orgId := data.Get("org_id").(string)
-	if orgId == "" {
-		return nil, errors.New("invalid org_id")
+	orgId, ok := data.GetOk("org_id")
+	if !ok {
+		return logical.ErrorResponse("please provide an org_id argument"), nil
 	}
-	err := req.Storage.Delete(ctx, configStoragePath+forwardSlash+orgId)
+	err := req.Storage.Delete(ctx, configStoragePath+orgId.(string))
 	if err != nil {
 		return nil, err
 	}
+	b.logger.Info("Deleted config for org ID " + orgId.(string))
 	b.reset()
 	return nil, nil
 }
 
-func getConfig(ctx context.Context, s logical.Storage, orgId string) (*astraConfig, error) {
-	entry, err := s.Get(ctx, configStoragePath+forwardSlash+orgId)
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-	config := astraConfig{}
-	if err := entry.DecodeJSON(&config); err != nil {
-		return nil, fmt.Errorf("error reading root configuration: %w", err)
-	}
-
-	// return the config, we are done
-	return &config, nil
-}
-
 func listConfig(ctx context.Context, s logical.Storage) ([]string, error) {
-	objList, err := s.List(ctx, configStoragePath+forwardSlash)
+	objList, err := s.List(ctx, configStoragePath)
 	if err != nil {
-		return nil, errors.New("failed to load config list")
+		return nil, errors.New("error loading config list")
 	}
 	if len(objList) == 0 {
 		return nil, errors.New("no configs found")
 	}
 	return objList, nil
+}
+
+func (b *datastaxAstraBackend) pathConfigExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	// The existence check determines whether the logical.Request.Operation value is Create or Update. In this case
+	//	we will skip the argument validation as it will be performed in the write path implementation.
+	obj, err := req.Storage.Get(ctx, configStoragePath + data.Get("org_id").(string))
+	if err != nil {
+		return false, errors.New("error retrieving config from storage for existence check: " + err.Error())
+	}
+
+	return obj != nil, nil
 }
 
 // pathConfigHelpSynopsis summarizes the help text for the configuration
